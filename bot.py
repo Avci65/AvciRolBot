@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # Railway'de değişken olarak ayarlayacağımız Token
     BOT_TOKEN = os.environ.get("8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ")
     
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
     
     app.add_handler(CommandHandler("startranked", start_ranked))
     app.add_handler(CommandHandler("rol", rol_ekle))
