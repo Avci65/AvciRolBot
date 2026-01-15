@@ -25,7 +25,6 @@ ROLE_EMOJIS = {
     "guard": "🛡", "twin": "👯", "double agent": "👥","avci": "🎯",
     "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏" ,"kurucu":"🧔🏻‍♂️"
 }
-
 game_data = {}
 
 def get_list_text(chat_id):
@@ -47,25 +46,25 @@ async def caperubeta_liste_kontrol(update: Update, context: ContextTypes.DEFAULT
     text = update.effective_message.text
     chat_id = update.effective_chat.id
 
-    # Eğer mesajda "💀 Ölü oyuncular" veya "❣️ Oyuncu Hayatta" başlığı varsa
     if "💀 Ölü oyuncular:" in text:
         if chat_id not in game_data: return
-        
-        # '○' sembolünden sonra gelen ismi yakalayan regex
-        # Örn: "○ Berke - Gözcü" içinden "Berke"yi alır
+        # ○ sembolünden sonraki ismi yakalar
         olu_isimleri = re.findall(r"○\s+([A-Za-z0-9İıĞğÜüŞşÖöÇç]+)", text)
-        
         degisiklik = False
         for uid, data in game_data[chat_id].items():
             if data['name'] in olu_isimleri and data['alive']:
                 game_data[chat_id][uid]['alive'] = False
                 degisiklik = True
-        
         if degisiklik:
-            await update.message.reply_text(
-                "📢 **Caperubeta Verisi İşlendi:** Ölüler listesi güncellendi.\n\n" + get_list_text(chat_id),
-                parse_mode="Markdown"
-            )
+            await update.message.reply_text("📢 **Caperubeta Senkronizasyonu:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id), parse_mode="Markdown")
+
+# START RANKED TAKİBİ (Fonsiyon olarak)
+async def startranked_takip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.effective_message.text: return
+    if "startranked" in update.effective_message.text.lower():
+        chat_id = update.effective_chat.id
+        game_data[chat_id] = {} # Verileri sıfırla
+        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi! \n Abd yeme :D ")
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -78,7 +77,6 @@ async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_data[chat_id][user.id] = {"name": user.first_name, "role": full_input.capitalize(), "emoji": emoji, "alive": True}
     await update.message.reply_text(get_list_text(chat_id), parse_mode="Markdown")
 
-# Diğer komutlar...
 async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_data[update.effective_chat.id] = {}
     await update.message.reply_text("✅ Roller temizlendi!")
@@ -89,13 +87,12 @@ if __name__ == '__main__':
     
     app.add_handler(CommandHandler("rol", rol_ekle))
     app.add_handler(CommandHandler("roller", lambda u, c: u.message.reply_text(get_list_text(u.effective_chat.id), parse_mode="Markdown")))
-    app.add_handler(CommandHandler("kill", lambda u, c: None)) # Manuel kill sistemi eklenebilir
     app.add_handler(CommandHandler("temizle", temizle_komut))
     
     # Caperubeta listesini okuyan handler
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), caperubeta_liste_kontrol))
     
-    # startranked takibi
-    app.add_handler(MessageHandler(filters.Regex(r"(?i)startranked"), lambda u, c: game_data.update({u.effective_chat.id: {}})))
+    # startranked takibi (Hem komut hem düz metin)
+    app.add_handler(MessageHandler(filters.TEXT, startranked_takip))
 
     app.run_polling()
