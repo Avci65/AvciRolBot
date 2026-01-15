@@ -5,10 +5,10 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, Callb
 
 # Rol ve Emoji Kütüphanesi
 ROLE_EMOJIS = {
-    "tavcı": "💂", "tarikat avcisi": "💂", "yancı": "💋", "melek": "👼", 
+    "tavcı": "💂", "tarikat avcisi": "💂", "yancı": "💋", "melek": "👼", "mafya":"🤵🏽‍♂️",
     "koruyucu melek": "👼", "detective": "🕵️","dete": "🕵️", "gözcü": "👳‍♀️",
     "otacı": "🍃", "muhtar": "🎖", "silah": "🔫", "prens": "👑", "prenses": "👑",
-    "çiftçi": "👨‍🌾", "barışcıl": "☮️", "demirci": "⚒", "çığırtkan": "📰",
+    "çiftçi": "👨‍🌾", "barışcıl": "☮️","Barışçıl":"☮️", "demirci": "⚒", "çığırtkan": "📰",
     "uyutucu": "💤", "şifacı": "🌟", "korsan": "🏴‍☠️", "gözcü çırağı": "🙇",
     "apps": "🙇", "kahin": "🌀", "tilki": "🦊", "avcı": "🎯", "yaşlı bilge": "👵🏻",
     "yb": "👵🏻", "sarhoş": "🍻", "mason": "👷", "masontek": "👷", "seyirci": "👁",
@@ -17,13 +17,13 @@ ROLE_EMOJIS = {
     "beceriksiz": "🤕","bec": "🤕", "kütüphaneci": "📚", "eros": "🏹", "fool": "🃏",
     "gof": "🃏&👳‍♀️", "köylü": "👱", "kemal": "👱", "kapıcı": "🏘", "bileyici": "👨🏻‍🦳",
     "deli": "🤪", "hereje": "🦹‍♂️", "yabani çoçuk": "👶", "yç": "👶", "hain": "🖕",
-    "lanetli": "😾", "kurtadam": "🐺", "kürt": "🐺", "alfa kurt": "⚡️",
+    "lanetli": "😾", "kurtadam": "🐺", "kürt": "🐺", "alfa kurt": "⚡️","kurdumsu":"👱🌚✨",
     "lycan": "🐺🌝", "yavru kurt": "🐶", "snow wolf": "❄️", "kuduz kurt": "🤢",
-    "hızlı kurt": "💨", "hungry wolf": "🍖", "yaşlı kurt": "🐲", "falcı": "🔮",
+    "hızlı kurt": "💨", "hungry wolf": "🍖", "yaşlı kurt": "🐲", "falcı": "🔮","Tuğba":"🎄",
     "taklitçi": "❌", "iblis": "👺", "survivor": "⛺️", "sk": "🔪", "seri katil": "🔪",
     "kundak": "🔥", "çg": "🎭", "çiftgiden": "🎭", "unutkan": "🤔", "tarikat": "👤",
     "guard": "🛡", "twin": "👯", "double agent": "👥","avci": "🎯","nöbetçi":"🦉",
-    "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏" ,"kurucu":"🧔🏻‍♂️","nöbet":"🦉",
+    "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏" ,"kurucu":"🧔🏻‍♂️","nöbet":"🦉","hüs":"🕺🏿","barış":"☮️",
 
 }
 game_data = {}
