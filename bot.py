@@ -1,49 +1,58 @@
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler
+from telegram.error import BadRequest
 
-# Rolleri saklamak için sözlük {chat_id: [liste]}
-game_roles = {}
+# Rolleri ve son mesaj ID'lerini saklamak için sözlük
+game_data = {} # {chat_id: {"roles": [], "last_msg_id": None}}
 
 async def start_ranked(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    # Yeni oyun başladığında listeyi sıfırla
-    game_roles[chat_id] = []
-    await update.message.reply_text("🎮 Ranked oyun başladı! Rolleri girmeye başlayabilirsiniz.\nÖrnek: /rol mason")
+    game_data[chat_id] = {"roles": [], "last_msg_id": None}
+    await update.message.reply_text("🎮 Ranked oyun başladı! Rolleri girmeye başlayabilirsiniz.")
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    user_name = update.effective_user.first_name  # Mesajı atan kişinin adı
+    user_name = update.effective_user.first_name
     
     if not context.args:
-        await update.message.reply_text("Lütfen bir rol belirtin. Örn: /rol avcı")
+        await update.message.reply_text("Lütfen bir rol belirtin. Örn: /rol mason")
         return
     
     rol_adi = " ".join(context.args)
-    yeni_satir = f"{user_name}: {rol_adi}" # Örn: Abdullah: Mason
+    yeni_satir = f"👤 {user_name}: {rol_adi}"
     
-    if chat_id not in game_roles:
-        game_roles[chat_id] = []
+    if chat_id not in game_data:
+        game_data[chat_id] = {"roles": [], "last_msg_id": None}
     
     # Listeye ekle
-    game_roles[chat_id].append(yeni_satir)
+    game_data[chat_id]["roles"].append(yeni_satir)
     
-    # Buton ekleyelim (Pratik temizlik için)
+    # Buton ve Liste Hazırlığı
     keyboard = [[InlineKeyboardButton("🗑️ Listeyi Temizle", callback_data="temizle_aksiyon")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    # Güncel listeyi oluştur
-    liste_metni = "\n".join(game_roles[chat_id])
-    
-    await update.message.reply_text(
-        f"✅ Rol kaydedildi.\n\n**Mevcut Roller:**\n{liste_metni}", 
-        reply_markup=reply_markup
-    )
+    liste_metni = "📜 **Güncel Roller:**\n" + "\n".join(game_data[chat_id]["roles"])
 
-async def temizle_komutu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    game_roles[chat_id] = []
-    await update.message.reply_text("🗑️ Tüm roller temizlendi!")
+    # EĞER daha önce bir liste mesajı atılmışsa, onu güncelle
+    if game_data[chat_id]["last_msg_id"]:
+        try:
+            await context.bot.edit_message_text(
+                chat_id=chat_id,
+                message_id=game_data[chat_id]["last_msg_id"],
+                text=liste_metni,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+            # Kullanıcının yazdığı /rol komutunu silerek grubu temiz tutalım (opsiyonel)
+            await update.message.delete()
+        except BadRequest:
+            # Mesaj çok eskiyse veya silinmişse yeni mesaj at
+            sent_msg = await update.message.reply_text(liste_metni, reply_markup=reply_markup, parse_mode="Markdown")
+            game_data[chat_id]["last_msg_id"] = sent_msg.message_id
+    else:
+        # İlk kez mesaj atılıyorsa
+        sent_msg = await update.message.reply_text(liste_metni, reply_markup=reply_markup, parse_mode="Markdown")
+        game_data[chat_id]["last_msg_id"] = sent_msg.message_id
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -51,19 +60,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     if query.data == "temizle_aksiyon":
-        game_roles[chat_id] = []
-        await query.edit_message_text("🗑️ Liste temizlendi! Yeni oyun başlatılabilir.")
+        game_data[chat_id] = {"roles": [], "last_msg_id": None}
+        await query.edit_message_text("🗑️ Liste temizlendi! Yeni oyun için /startranked yazabilirsiniz.")
 
 if __name__ == '__main__':
-    # Senin Token'ın
     TOKEN = "8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ"
-    
     app = ApplicationBuilder().token(TOKEN).build()
     
     app.add_handler(CommandHandler("startranked", start_ranked))
     app.add_handler(CommandHandler("rol", rol_ekle))
-    app.add_handler(CommandHandler("temizle", temizle_komutu))
     app.add_handler(CallbackQueryHandler(button_handler))
     
-    print("Bot aktif ve isim yazdırma özelliği eklendi...")
+    print("Bot güncellendi: Mesaj düzenleme aktif.")
     app.run_polling()
