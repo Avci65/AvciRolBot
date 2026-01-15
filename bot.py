@@ -74,7 +74,7 @@ game_data = {}
 
 async def yeni_oyun_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg_text = update.effective_message.text.lower() if update.effective_message.text else ""
-    if "startranked" in msg_text or "temizle" in msg_text:
+    if "/startranked@Caperubetabot" in msg_text:
         chat_id = update.effective_chat.id
         game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
         await update.message.reply_text("💋 **Caperubeta Ranked**\n✅ Roller temizlendi, yeni oyun başladı!", parse_mode="Markdown")
@@ -135,7 +135,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     if query.data == "temizle_aksiyon":
         game_data[query.message.chat_id] = {"user_roles": {}, "last_msg_id": None}
-        await query.edit_message_text("✅ Roller temizlendi, yeni oyun başladı!")
+        await query.edit_message_text("✅ Roller temizlendi")
 
 if __name__ == '__main__':
     TOKEN = "8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ"
