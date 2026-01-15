@@ -32,7 +32,7 @@ async def temizle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     # Railway'de değişken olarak ayarlayacağımız Token
-    TOKEN = os.environ.get("8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ")
+    BOT_TOKEN = os.environ.get("8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ")
     
     app = ApplicationBuilder().token(TOKEN).build()
     
