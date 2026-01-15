@@ -2,7 +2,7 @@ import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
 
-# Rol ve Emoji Eşleşmeleri
+# Rol ve Emoji Eşleşmeleri (Senin gönderdiğin liste)
 ROLE_EMOJIS = {
     "tavcı": "💂", "tarikat avcisi": "💂",
     "yancı": "💋", "hood": "💋",
@@ -72,22 +72,33 @@ ROLE_EMOJIS = {
 
 game_data = {}
 
-# 1. Metin Mesajı Dinleyici (/startranked@... için)
-async def metin_mesaj_takip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# 1. Metin Mesajı Dinleyici (Hem düz metin hem komut içindeki startranked'ı yakalar)
+async def startranked_takip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_message.text: return
     msg_text = update.effective_message.text.lower()
     
-    if "startranked@caperubetabot" in msg_text:
+    if "startranked" in msg_text:
         chat_id = update.effective_chat.id
         game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
         await update.message.reply_text("✅ Yeni oyun başlatıldı, roller temizlendi!", parse_mode="Markdown")
 
-# 2. /temizle Komutu Dinleyici
+# 2. /temizle Komutu
 async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
     await update.message.reply_text("✅ Roller temizlendi!", parse_mode="Markdown")
 
+# 3. /roller Komutu
+async def roller_listele(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    if chat_id not in game_data or not game_data[chat_id]["user_roles"]:
+        await update.message.reply_text("ℹ️ Henüz hiç rol girilmemiş.")
+        return
+    current_roles = list(game_data[chat_id]["user_roles"].values())
+    liste_metni = "📜 **MEVCUT ROL LİSTESİ**\n\n" + "\n".join(current_roles)
+    await update.message.reply_text(liste_metni, parse_mode="Markdown")
+
+# 4. /rol ekleme
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
@@ -103,6 +114,7 @@ async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id not in game_data:
         game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
     
+    # Kullanıcı adı : Rol Emoji formatı
     game_data[chat_id]["user_roles"][user_id] = f"👤 {user_name}: {rol_input.capitalize()} {emoji}"
     
     keyboard = [[InlineKeyboardButton("🗑️ Listeyi Temizle", callback_data="temizle_aksiyon")]]
@@ -127,6 +139,7 @@ async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sent_msg = await update.message.reply_text(liste_metni, reply_markup=reply_markup, parse_mode="Markdown")
         game_data[chat_id]["last_msg_id"] = sent_msg.message_id
 
+# 5. Buton İşleyici
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -138,14 +151,16 @@ if __name__ == '__main__':
     TOKEN = "8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ"
     app = ApplicationBuilder().token(TOKEN).build()
     
-    # Metin filtreleri (Komut olmayan düz mesajları okur)
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), metin_mesaj_takip))
-    
-    # Komut filtreleri
+    # Komutlar
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("rol", rol_ekle))
+    app.add_handler(CommandHandler("roller", roller_listele))
+    
+    # Metin Mesajı Takibi (startranked metnini yakalamak için COMMAND filtresini kaldırdım)
+    app.add_handler(MessageHandler(filters.TEXT, startranked_takip))
     
     # Buton tıklama
     app.add_handler(CallbackQueryHandler(button_handler))
     
+    print("Bot yeni emojiler ve güncel ayarlarla başlatıldı...")
     app.run_polling()
