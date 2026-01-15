@@ -21,8 +21,8 @@ ROLE_EMOJIS = {
     "hızlı kurt": "💨", "hungry wolf": "🍖", "yaşlı kurt": "🐲", "falcı": "🔮",
     "taklitçi": "❌", "iblis": "👺", "survivor": "⛺️", "sk": "🔪", "seri katil": "🔪",
     "kundak": "🔥", "çg": "🎭", "çiftgiden": "🎭", "unutkan": "🤔", "tarikat": "👤",
-    "guard": "🛡", "twin": "👯", "double agent": "👥",
-    "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏"
+    "guard": "🛡", "twin": "👯", "double agent": "👥","avci": "🎯",
+    "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏" ,"kurucu":"🧔🏻‍♂️"
 }
 
 game_data = {}
