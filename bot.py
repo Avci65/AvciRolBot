@@ -1,18 +1,36 @@
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, CallbackQueryHandler, MessageHandler, filters
+from telegram.error import BadRequest
 
+# Veri saklama alanı
 game_data = {}
 
 async def yeni_oyun_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Mesajın içeriğini kontrol et (küçük harfe çevirerek bakıyoruz)
     msg_text = update.effective_message.text.lower() if update.effective_message.text else ""
     
-    # Eğer mesaj /startranked ile başlıyorsa veya içinde bu metin geçiyorsa
+    # Eğer mesajda startranked veya temizle geçiyorsa (komut veya düz metin)
     if "startranked" in msg_text or "temizle" in msg_text:
         chat_id = update.effective_chat.id
         game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
         await update.message.reply_text("✅ Roller temizlendi, yeni oyun başladı!")
+
+async def roller_listele(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    
+    if chat_id not in game_data or not game_data[chat_id]["user_roles"]:
+        await update.message.reply_text("ℹ️ Henüz hiç rol girilmemiş.")
+        return
+
+    # Mevcut listeyi hazırla
+    current_roles = list(game_data[chat_id]["user_roles"].values())
+    liste_metni = "📜 **Mevcut Roller:**\n" + "\n".join(current_roles)
+    
+    # Temizle butonu ile birlikte gönder
+    keyboard = [[InlineKeyboardButton("🗑️ Listeyi Temizle", callback_data="temizle_aksiyon")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(liste_metni, reply_markup=reply_markup, parse_mode="Markdown")
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -27,7 +45,7 @@ async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if chat_id not in game_data:
         game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
     
-    # Aynı kullanıcı girerse eskisini siler, sadece son rolü tutar
+    # Kişi başı tek rol kaydı
     game_data[chat_id]["user_roles"][user_id] = f"👤 {user_name}: {rol_adi}"
     
     keyboard = [[InlineKeyboardButton("🗑️ Listeyi Temizle", callback_data="temizle_aksiyon")]]
@@ -36,6 +54,7 @@ async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current_roles = list(game_data[chat_id]["user_roles"].values())
     liste_metni = "📜 **Güncel Roller:**\n" + "\n".join(current_roles)
 
+    # Mesaj düzenleme veya yeni mesaj
     if game_data[chat_id]["last_msg_id"]:
         try:
             await context.bot.edit_message_text(
@@ -64,14 +83,15 @@ if __name__ == '__main__':
     TOKEN = "8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ"
     app = ApplicationBuilder().token(TOKEN).build()
     
-    # Mesajları dinleyen handler (Hem komutları hem normal metinleri yakalar)
+    # Filtre ile startranked/temizle metinlerini yakala
     app.add_handler(MessageHandler(filters.Regex(r"(?i)startranked|temizle"), yeni_oyun_baslat))
     
-    # Rol ekleme komutu
+    # Komutlar
     app.add_handler(CommandHandler("rol", rol_ekle))
+    app.add_handler(CommandHandler("roller", roller_listele)) # Yeni komut
     
-    # Buton tıklaması
+    # Buton
     app.add_handler(CallbackQueryHandler(button_handler))
     
-    print("Bot yayında: Mesaj okuma modu aktif.")
+    print("Bot yayında: /roller komutu eklendi.")
     app.run_polling()
