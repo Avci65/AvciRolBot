@@ -22,8 +22,9 @@ ROLE_EMOJIS = {
     "hızlı kurt": "💨", "hungry wolf": "🍖", "yaşlı kurt": "🐲", "falcı": "🔮",
     "taklitçi": "❌", "iblis": "👺", "survivor": "⛺️", "sk": "🔪", "seri katil": "🔪",
     "kundak": "🔥", "çg": "🎭", "çiftgiden": "🎭", "unutkan": "🤔", "tarikat": "👤",
-    "guard": "🛡", "twin": "👯", "double agent": "👥","avci": "🎯",
-    "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏" ,"kurucu":"🧔🏻‍♂️"
+    "guard": "🛡", "twin": "👯", "double agent": "👥","avci": "🎯","nöbetçi":"🦉",
+    "polis": "👮", "burçin": "👮", "kocakafa": "😏", "kk": "😏" ,"kurucu":"🧔🏻‍♂️","nöbet":"🦉",
+
 }
 game_data = {}
 
@@ -64,7 +65,7 @@ async def startranked_takip(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "startranked" in update.effective_message.text.lower():
         chat_id = update.effective_chat.id
         game_data[chat_id] = {} # Verileri sıfırla
-        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi! \n Abd yeme :D ")
+        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi! \n Abd yeme :D 🤣😂🙂‍↔️🤓🫣🤠 ")
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
