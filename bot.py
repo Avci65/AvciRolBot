@@ -14,7 +14,7 @@ ROLE_EMOJIS = {
     "oduncu": "🪓", "fırıncı": "🥖", "bec": "🤕", "eros": "🏹", "fool": "🃏",
     "gof": "🃏&👳‍♀️", "kemal": "👱", "kapıcı": "🏘", "deli": "🤪", "hain": "🖕",
     "lanetli": "😾", "kurtadam": "🐺", "kürt": "🐺", "alfa": "⚡️", "lycan": "🐺🌝",
-    "yavru": "🐶", "kuduz": "🤢", "hızlı": "💨", "sk": "🔪", "kundak": "🔥","kyura" :"🧛🏻‍♂️",
+    "yavru": "🐶", "kuduz": "🤢", "hızlı": "💨", "sk": "🔪", "kundak": "🔥","kyura" :"🕊",
     "çg": "🎭", "tarikat": "👤", "polis": "👮", "burçin": "👮", "kocakafa": "😏","sgy": "👁","sgv": "👁👳‍♀️",
     "kk": "😏", "kurucu": "🧔🏻‍♂️", "nöbet": "🦉", "hüs": "🕺🏿", "barış": "☮️", "kurdumsu": "👱🌚✨"
 }
@@ -27,7 +27,7 @@ def get_list_text(chat_id):
     living, dead = [], []
     for uid, data in game_data[chat_id].items():
         line = f"👤 {data['name']}: {data['role']} {data['emoji']}"
-        if data['alive']: living.append(f"❤️ {line}")
+        if data['alive']: living.append(f"❣️ {line}")
         else: dead.append(f"☠️ {line}")
     text = "📜 **GÜNCEL DURUM LİSTESİ**\n\n"
     text += "✨ **YAŞAYANLAR**\n" + ("\n".join(living) if living else "*(Kimse yok)*") + "\n\n"
