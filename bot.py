@@ -67,20 +67,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == "temizle_aksiyon":
         game_data[chat_id] = {"user_roles": {}, "last_msg_id": None}
-        await query.edit_message_text("✅ Roller temizlendi, yeni oyun başladı!")
+        await query.edit_message_text("✅ Roller temizlendi ")
 
 if __name__ == '__main__':
     TOKEN = "8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ"
     
     app = ApplicationBuilder().token(TOKEN).build()
     
-    # Komutlar
+    # Komutların başına mutlaka / koymadan ekliyoruz
     app.add_handler(CommandHandler("startranked", start_ranked))
-    app.add_handler(CommandHandler("temizle", start_ranked)) # Temizle de aynı işlemi yapar
+    app.add_handler(CommandHandler("temizle", start_ranked))
     app.add_handler(CommandHandler("rol", rol_ekle))
     
-    # Buton tıklaması
     app.add_handler(CallbackQueryHandler(button_handler))
     
-    print("Bot güncellendi: StartRanked sıfırlama özelliği eklendi.")
     app.run_polling()
