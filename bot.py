@@ -45,7 +45,7 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
     # 1. START RANKED KONTROLÜ (Mesajın içinde geçmesi yeterli)
     if "startranked" in text.lower():
         game_data[chat_id] = {}
-        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi!\nAbd yeme :D 🤣😂")
+        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi!\n Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ ")
         return # İşlem bittiği için diğer kontrollere geçme
 
     # 2. CAPERUBETA LİSTE ANALİZİ
