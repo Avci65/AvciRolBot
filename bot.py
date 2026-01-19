@@ -182,7 +182,8 @@ D_SORULARI = [
     "Sude’nin hangi özelliği seni en çok etkiliyor?",
     "Sude’ye şu an tek bir mesaj atacak olsan ne yazardın?",
     "Sude ile ilgili en unutamadığın anın ne?",
-    "Sude’yi diğer insanlardan ayıran şey sence ne?"
+    "Sude’yi diğer insanlardan ayıran şey sence ne?",
+    "Sude’nin en kötü özelliği ne sence ????"
 ]
 
 C_SORULARI = [
