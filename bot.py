@@ -174,7 +174,15 @@ D_SORULARI = [
     "En büyük güvensizlik sebebin ne?",
     "Hayatında en çok hangi şeyi gizledin?",
     "Bugüne kadar en çok hangi şeyi sakladın?",
-    "Bugüne kadar en çok hangi şeyi itiraf ettin?"
+    "Bugüne kadar en çok hangi şeyi itiraf ettin?",
+    "Grupta en çok Sude’yi sevmenin güzel hissini anlatır mısın?",
+    "Sude’nin sende bıraktığı en güzel his ne?",
+    "Sude’ye bir gün 'iyi ki varsın' deme şansın olsa nasıl söylerdin?",
+    "Sude’yi düşündüğünde aklına gelen ilk 3 kelime ne?",
+    "Sude’nin hangi özelliği seni en çok etkiliyor?",
+    "Sude’ye şu an tek bir mesaj atacak olsan ne yazardın?",
+    "Sude ile ilgili en unutamadığın anın ne?",
+    "Sude’yi diğer insanlardan ayıran şey sence ne?"
 ]
 
 C_SORULARI = [
