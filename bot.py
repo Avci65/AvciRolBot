@@ -108,7 +108,6 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot aktif çalışıyor!")
 
 
-# ✅ /startranked komutu (BUNU EKLEDİM)
 async def startranked_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     game_data[chat_id] = {}
@@ -192,31 +191,43 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
     if not msg:
         return
 
-    # ✅ Başka bot mesajı caption ile gelirse de oku
     text = msg.text if msg.text else (msg.caption if msg.caption else None)
     if not text:
         return
 
     chat_id = update.effective_chat.id
 
-    # (Bu kısım artık komut değil -> /startranked handlerda)
-    # if "startranked" in text.lower(): ...
-
-    if "💀 Ölü oyuncular:" in text:
+    # ✅ Yeni format: "Ölü oyuncular: 1/5"
+    if "ölü oyuncular:" in text.lower():
         if chat_id not in game_data:
             return
 
-        satirlar = text.split('\n')
-        olu_isimleri = [
-            s.replace('○', '').split('-')[0].strip().split(' ')[0].lower()
-            for s in satirlar if s.strip().startswith('○')
-        ]
+        satirlar = text.splitlines()
+
+        olu_isimleri = []
+        for s in satirlar:
+            s = s.strip()
+            if s.startswith("💀"):
+                # örn: "💀 Abdullah ⁪⁬⁮⁮⁮⁮ - Sarhoş 🍻"
+                parca = s.replace("💀", "").strip()
+                ad_kismi = parca.split("-")[0].strip()
+                # sadece isim (ilk kelime) değil, tüm isim:
+                ad_kismi = re.sub(r"\s+", " ", ad_kismi)
+                olu_isimleri.append(ad_kismi.lower())
+
+        # Debug için log
+        print("☠️ Ölü tespit:", olu_isimleri)
 
         degisiklik = False
         for uid, data in game_data[chat_id].items():
-            if data['alive'] and data['name'].lower() in olu_isimleri:
-                game_data[chat_id][uid]['alive'] = False
-                degisiklik = True
+            # burada isim eşleşmesi için daha esnek yaptım:
+            oyuncu_adi = data["name"].lower()
+
+            for oluisim in olu_isimleri:
+                if oyuncu_adi in oluisim or oluisim in oyuncu_adi:
+                    if data["alive"]:
+                        game_data[chat_id][uid]["alive"] = False
+                        degisiklik = True
 
         if degisiklik:
             await update.message.reply_text(
@@ -272,6 +283,7 @@ if __name__ == '__main__':
 
     # ✅ /startranked komutu eklendi
     app.add_handler(CommandHandler("startranked", startranked_cmd))
+
 
     # Grup kayıt
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
