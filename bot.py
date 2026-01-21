@@ -81,7 +81,7 @@ def get_list_text(chat_id):
     return text
 
 
-# ✅ Webhook temizle (polling update alamama sorunu fix)
+# ✅ Webhook temizle
 async def post_init(application):
     try:
         await application.bot.delete_webhook(drop_pending_updates=True)
@@ -90,21 +90,32 @@ async def post_init(application):
         print("⚠️ Webhook temizlenemedi:", e)
 
 
-# ✅ Debug: update geliyor mu?
+# ✅ Debug
 async def debug_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         chat = update.effective_chat
         user = update.effective_user
-        txt = update.effective_message.text if update.effective_message else None
+        msg = update.effective_message
+        txt = msg.text if msg and msg.text else (msg.caption if msg and msg.caption else None)
         if txt:
             print(f"📩 UPDATE | chat={chat.id} type={chat.type} user={user.id} text={txt}")
     except Exception as e:
         print("DEBUG ERROR:", e)
 
 
-# ✅ /ping test komutu
+# ✅ /ping
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot aktif çalışıyor!")
+
+
+# ✅ /startranked komutu (BUNU EKLEDİM)
+async def startranked_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    game_data[chat_id] = {}
+    await update.message.reply_text(
+        "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
+        "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ "
+    )
 
 
 async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -119,10 +130,7 @@ async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYP
     new_status = my_member.new_chat_member.status
 
     if new_status in ("member", "administrator"):
-        BOT_GROUPS[str(chat.id)] = {
-            "title": chat.title or "NoTitle",
-            "type": chat.type
-        }
+        BOT_GROUPS[str(chat.id)] = {"title": chat.title or "NoTitle", "type": chat.type}
         save_groups(BOT_GROUPS)
 
     elif new_status in ("left", "kicked"):
@@ -138,10 +146,7 @@ async def track_any_group_message(update: Update, context: ContextTypes.DEFAULT_
     if chat.type in ("group", "supergroup"):
         key = str(chat.id)
         if key not in BOT_GROUPS:
-            BOT_GROUPS[key] = {
-                "title": chat.title or "NoTitle",
-                "type": chat.type
-            }
+            BOT_GROUPS[key] = {"title": chat.title or "NoTitle", "type": chat.type}
             save_groups(BOT_GROUPS)
 
 
@@ -151,7 +156,7 @@ async def groups_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if user.id != OWNER_ID:
-        return  # gizli
+        return
 
     if not BOT_GROUPS:
         await update.message.reply_text("📌 Kayıtlı grup yok.")
@@ -183,25 +188,42 @@ async def dc_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_message or not update.effective_message.text: return
-    text, chat_id = update.effective_message.text, update.effective_chat.id
-    
-    if "startranked" in text.lower():
-        game_data[chat_id] = {}
-        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi!\n Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ ")
+    msg = update.effective_message
+    if not msg:
         return
 
+    # ✅ Başka bot mesajı caption ile gelirse de oku
+    text = msg.text if msg.text else (msg.caption if msg.caption else None)
+    if not text:
+        return
+
+    chat_id = update.effective_chat.id
+
+    # (Bu kısım artık komut değil -> /startranked handlerda)
+    # if "startranked" in text.lower(): ...
+
     if "💀 Ölü oyuncular:" in text:
-        if chat_id not in game_data: return
+        if chat_id not in game_data:
+            return
+
         satirlar = text.split('\n')
-        olu_isimleri = [s.replace('○', '').split('-')[0].strip().split(' ')[0].lower() for s in satirlar if s.strip().startswith('○')]
+        olu_isimleri = [
+            s.replace('○', '').split('-')[0].strip().split(' ')[0].lower()
+            for s in satirlar if s.strip().startswith('○')
+        ]
+
         degisiklik = False
         for uid, data in game_data[chat_id].items():
             if data['alive'] and data['name'].lower() in olu_isimleri:
                 game_data[chat_id][uid]['alive'] = False
                 degisiklik = True
+
         if degisiklik:
-            await update.message.reply_text("📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id), parse_mode="Markdown")
+            await update.message.reply_text(
+                "📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id),
+                parse_mode="Markdown"
+            )
+
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -242,29 +264,32 @@ if __name__ == '__main__':
 
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
-    # Debug - update geliyor mu (Railway logs)
+    # Debug update log
     app.add_handler(MessageHandler(filters.ALL, debug_all), group=-1)
 
     # Test
     app.add_handler(CommandHandler("ping", ping))
 
-    # Grup kayıt sistemi
+    # ✅ /startranked komutu eklendi
+    app.add_handler(CommandHandler("startranked", startranked_cmd))
+
+    # Grup kayıt
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_any_group_message))
 
-
-    # Owner-only komut
+    # Owner-only
     app.add_handler(CommandHandler("groups", groups_cmd))
 
-    # Senin mevcut handlerların
+    # Mevcut komutlar
     app.add_handler(CommandHandler("rol", rol_ekle))
     app.add_handler(CommandHandler("roller", lambda u, c: u.message.reply_text(get_list_text(u.effective_chat.id), parse_mode="Markdown")))
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("dc", dc_komut))
 
     app.add_handler(CallbackQueryHandler(dc_button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, genel_mesaj_yoneticisi))
 
+    # ✅ komut olmayan yazılar
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, genel_mesaj_yoneticisi))
 
     print("✅ Polling başlıyor...")
     app.run_polling(drop_pending_updates=True)
