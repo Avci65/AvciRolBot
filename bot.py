@@ -183,42 +183,25 @@ async def dc_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.effective_message or not update.effective_message.text:
-        return
-
-    text = update.effective_message.text
-    chat_id = update.effective_chat.id
-
+    if not update.effective_message or not update.effective_message.text: return
+    text, chat_id = update.effective_message.text, update.effective_chat.id
+    
     if "startranked" in text.lower():
         game_data[chat_id] = {}
-        await update.message.reply_text(
-            "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
-            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ "
-        )
+        await update.message.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi!\n Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ ")
         return
 
     if "💀 Ölü oyuncular:" in text:
-        if chat_id not in game_data:
-            return
-
+        if chat_id not in game_data: return
         satirlar = text.split('\n')
-        olu_isimleri = [
-            s.replace('○', '').split('-')[0].strip().split(' ')[0].lower()
-            for s in satirlar if s.strip().startswith('○')
-        ]
-
+        olu_isimleri = [s.replace('○', '').split('-')[0].strip().split(' ')[0].lower() for s in satirlar if s.strip().startswith('○')]
         degisiklik = False
         for uid, data in game_data[chat_id].items():
             if data['alive'] and data['name'].lower() in olu_isimleri:
                 game_data[chat_id][uid]['alive'] = False
                 degisiklik = True
-
         if degisiklik:
-            await update.message.reply_text(
-                "📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id),
-                parse_mode="Markdown"
-            )
-
+            await update.message.reply_text("📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id), parse_mode="Markdown")
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
