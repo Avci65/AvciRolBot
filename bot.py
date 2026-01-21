@@ -267,7 +267,8 @@ if __name__ == '__main__':
 
     # Grup kayıt sistemi
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.TEXT, track_any_group_message))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_any_group_message))
+
 
     # Owner-only komut
     app.add_handler(CommandHandler("groups", groups_cmd))
@@ -279,7 +280,8 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("dc", dc_komut))
 
     app.add_handler(CallbackQueryHandler(dc_button_handler))
-    app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, genel_mesaj_yoneticisi))
+
 
     print("✅ Polling başlıyor...")
     app.run_polling(drop_pending_updates=True)
