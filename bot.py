@@ -467,6 +467,8 @@ C_SORULARI = [
 # --- Railway ENV ---
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✅ Bot aktif çalışıyor!")
 
 GROUP_DB_FILE = os.getenv("GROUP_DB_FILE", "groups.json")
 
@@ -614,15 +616,24 @@ async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
 
+    print("✅ Bot başlatılıyor...")
+
     if not BOT_TOKEN:
         raise ValueError("BOT_TOKEN env variable missing!")
     if OWNER_ID == 0:
         raise ValueError("OWNER_ID env variable missing!")
 
+    print("✅ ENV okundu. OWNER_ID:", OWNER_ID)
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await update.message.reply_text("✅ Bot aktif çalışıyor!")
+
+    app.add_handler(CommandHandler("ping", ping))
+
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.TEXT, track_any_group_message))  # ✅ uyumlu
+    app.add_handler(MessageHandler(filters.TEXT, track_any_group_message))
 
     app.add_handler(CommandHandler("groups", groups_cmd))
 
@@ -634,4 +645,5 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(dc_button_handler))
     app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi))
 
-    app.run_polling()
+    print("✅ Polling başlıyor...")
+    app.run_polling(drop_pending_updates=True)
