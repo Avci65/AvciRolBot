@@ -614,22 +614,18 @@ async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
 
-    # Railway Variables kontrol
     if not BOT_TOKEN:
-        raise ValueError("BOT_TOKEN env variable missing! Railway Variables içine BOT_TOKEN ekle.")
+        raise ValueError("BOT_TOKEN env variable missing!")
     if OWNER_ID == 0:
-        raise ValueError("OWNER_ID env variable missing! Railway Variables içine OWNER_ID ekle.")
+        raise ValueError("OWNER_ID env variable missing!")
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # ✅ Botun bulunduğu grupları otomatik kaydet
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT, track_any_group_message))
+    app.add_handler(MessageHandler(filters.TEXT, track_any_group_message))  # ✅ uyumlu
 
-    # ✅ Sadece owner görebilir: /groups
     app.add_handler(CommandHandler("groups", groups_cmd))
 
-    # ----------------- SENİN MEVCUT BOT HANDLERLARI (DEĞİŞMEDİ) -----------------
     app.add_handler(CommandHandler("rol", rol_ekle))
     app.add_handler(CommandHandler("roller", lambda u, c: u.message.reply_text(get_list_text(u.effective_chat.id), parse_mode="Markdown")))
     app.add_handler(CommandHandler("temizle", temizle_komut))
