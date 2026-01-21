@@ -108,14 +108,6 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot aktif çalışıyor!")
 
 
-async def startranked_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    game_data[chat_id] = {}
-    await update.message.reply_text(
-        "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
-        "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ "
-    )
-
 
 async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -185,20 +177,38 @@ async def dc_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         soru = random.choice(C_SORULARI)
         await query.edit_message_text(f"🔥 **Cesaret:**\n\n{soru}")
 
-
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
         return
 
-    text = msg.text if msg.text else (msg.caption if msg.caption else None)
+    text = msg.text if msg.text else (msg.caption if msg.caption else "")
     if not text:
         return
 
     chat_id = update.effective_chat.id
+    t = text.strip().lower()
+
+    # ✅ STARTRANKEDİ MESAJDAN YAKALA (komut şart değil)
+    # örnekler:
+    # startranked
+    # /startranked
+    # /startranked@caperubetabot
+    if t == "startranked" or t.startswith("/startranked"):
+        game_data[chat_id] = {}
+        await msg.reply_text(
+            "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
+            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ "
+        )
+        return
+
+    # ✅ DİĞER KOMUTLARI BOŞVER (rol/dc/roller vs)
+    # böylece CommandHandler’lar düzgün çalışır
+    if t.startswith("/") and not t.startswith("/startranked"):
+        return
 
     # ✅ Yeni format: "Ölü oyuncular: 1/5"
-    if "ölü oyuncular:" in text.lower():
+    if "ölü oyuncular:" in t:
         if chat_id not in game_data:
             return
 
@@ -207,34 +217,41 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
         olu_isimleri = []
         for s in satirlar:
             s = s.strip()
-            if s.startswith("💀"):
-                # örn: "💀 Abdullah ⁪⁬⁮⁮⁮⁮ - Sarhoş 🍻"
-                parca = s.replace("💀", "").strip()
-                ad_kismi = parca.split("-")[0].strip()
-                # sadece isim (ilk kelime) değil, tüm isim:
-                ad_kismi = re.sub(r"\s+", " ", ad_kismi)
-                olu_isimleri.append(ad_kismi.lower())
 
-        # Debug için log
+            # örn: "💀 Abdullah ⁪⁬⁮⁮⁮⁮ - Sarhoş 🍻"
+            if s.startswith("💀"):
+                parca = s.replace("💀", "").strip()
+
+                # "-" öncesi isim kısmı
+                ad_kismi = parca.split("-")[0].strip()
+
+                # fazla boşlukları düzelt
+                ad_kismi = re.sub(r"\s+", " ", ad_kismi)
+
+                # görünmez unicode karakterleri temizle (çok önemli)
+                ad_kismi = re.sub(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f]", "", ad_kismi).strip()
+
+                if ad_kismi:
+                    olu_isimleri.append(ad_kismi.lower())
+
         print("☠️ Ölü tespit:", olu_isimleri)
 
         degisiklik = False
         for uid, data in game_data[chat_id].items():
-            # burada isim eşleşmesi için daha esnek yaptım:
-            oyuncu_adi = data["name"].lower()
+            oyuncu_adi = (data.get("name") or "").lower().strip()
 
             for oluisim in olu_isimleri:
-                if oyuncu_adi in oluisim or oluisim in oyuncu_adi:
-                    if data["alive"]:
+                # esnek eşleştirme
+                if oyuncu_adi and (oyuncu_adi in oluisim or oluisim in oyuncu_adi):
+                    if data.get("alive", True):
                         game_data[chat_id][uid]["alive"] = False
                         degisiklik = True
 
         if degisiklik:
-            await update.message.reply_text(
+            await msg.reply_text(
                 "📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id),
                 parse_mode="Markdown"
             )
-
 
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
@@ -281,8 +298,7 @@ if __name__ == '__main__':
     # Test
     app.add_handler(CommandHandler("ping", ping))
 
-    # ✅ /startranked komutu eklendi
-    app.add_handler(CommandHandler("startranked", startranked_cmd))
+   
 
 
     # Grup kayıt
@@ -301,7 +317,8 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(dc_button_handler))
 
     # ✅ komut olmayan yazılar
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, genel_mesaj_yoneticisi))
+    app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi))
+
 
     print("✅ Polling başlıyor...")
     app.run_polling(drop_pending_updates=True)
