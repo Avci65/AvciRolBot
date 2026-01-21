@@ -3,6 +3,8 @@ import re
 import random
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, CallbackQueryHandler, filters
+import json
+from telegram.ext import ChatMemberHandler
 
 # Rol ve Emoji Kütüphanesi
 ROLE_EMOJIS = {
@@ -462,6 +464,24 @@ C_SORULARI = [
     "Grupta birini seç: onunla ilgili 3 tane 'gizli yetenek' tahmini yap.",
     "Grupta bir mesaj at: 'Ben artık bu grubun moderatörüyüm' ve 1 kural koy."
 ]
+# --- Railway ENV ---
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+
+GROUP_DB_FILE = os.getenv("GROUP_DB_FILE", "groups.json")
+
+def load_groups():
+    try:
+        with open(GROUP_DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_groups(data):
+    with open(GROUP_DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+BOT_GROUPS = load_groups()
 
 game_data = {}
 
@@ -477,6 +497,64 @@ def get_list_text(chat_id):
     text += "✨ **YAŞAYANLAR**\n" + ("\n".join(living) if living else "*(Kimse yok)*") + "\n\n"
     text += "⚰️ **ÖLÜLER**\n" + ("\n".join(dead) if dead else "*(Henüz ölen yok)*")
     return text
+async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    my_member = update.my_chat_member
+    if not chat or not my_member:
+        return
+
+    if chat.type not in ("group", "supergroup"):
+        return
+
+    new_status = my_member.new_chat_member.status
+
+    if new_status in ("member", "administrator"):
+        BOT_GROUPS[str(chat.id)] = {
+            "title": chat.title or "NoTitle",
+            "type": chat.type
+        }
+        save_groups(BOT_GROUPS)
+
+    elif new_status in ("left", "kicked"):
+        BOT_GROUPS.pop(str(chat.id), None)
+        save_groups(BOT_GROUPS)
+
+
+async def track_any_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if not chat:
+        return
+
+    if chat.type in ("group", "supergroup"):
+        key = str(chat.id)
+        if key not in BOT_GROUPS:
+            BOT_GROUPS[key] = {
+                "title": chat.title or "NoTitle",
+                "type": chat.type
+            }
+            save_groups(BOT_GROUPS)
+
+
+async def groups_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not user:
+        return
+
+    # Sadece owner görsün
+    if user.id != OWNER_ID:
+        return  # cevap vermesin
+
+    if not BOT_GROUPS:
+        await update.message.reply_text("📌 Kayıtlı grup yok.")
+        return
+
+    lines = []
+    for gid, info in BOT_GROUPS.items():
+        lines.append(f"• {info['title']} | ID: `{gid}`")
+
+    text = "✅ Botun bulunduğu gruplar:\n\n" + "\n".join(lines)
+    await update.message.reply_text(text, parse_mode="Markdown")
+
 
 async def dc_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
@@ -535,14 +613,28 @@ async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Roller temizlendi!")
 
 if __name__ == '__main__':
-    TOKEN = "8285121175:AAF9oSTRMr_XG4Xnk1kSR-UfA42kdy1C-nQ"
-    app = ApplicationBuilder().token(TOKEN).build()
-    
+
+    # Railway Variables kontrol
+    if not BOT_TOKEN:
+        raise ValueError("BOT_TOKEN env variable missing! Railway Variables içine BOT_TOKEN ekle.")
+    if OWNER_ID == 0:
+        raise ValueError("OWNER_ID env variable missing! Railway Variables içine OWNER_ID ekle.")
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    # ✅ Botun bulunduğu grupları otomatik kaydet
+    app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
+    app.add_handler(MessageHandler(filters.ChatType.GROUPS & filters.TEXT, track_any_group_message))
+
+    # ✅ Sadece owner görebilir: /groups
+    app.add_handler(CommandHandler("groups", groups_cmd))
+
+    # ----------------- SENİN MEVCUT BOT HANDLERLARI (DEĞİŞMEDİ) -----------------
     app.add_handler(CommandHandler("rol", rol_ekle))
     app.add_handler(CommandHandler("roller", lambda u, c: u.message.reply_text(get_list_text(u.effective_chat.id), parse_mode="Markdown")))
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("dc", dc_komut))
-    
+
     app.add_handler(CallbackQueryHandler(dc_button_handler))
     app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi))
 
