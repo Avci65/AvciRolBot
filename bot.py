@@ -494,6 +494,8 @@ def save_groups(data):
 
 BOT_GROUPS = load_groups()
 game_data = {}
+LAST_LIST_MSG = {}
+
 
 
 def get_list_text(chat_id):
@@ -510,6 +512,18 @@ def get_list_text(chat_id):
     text += "✨ **YAŞAYANLAR**\n" + ("\n".join(living) if living else "*(Kimse yok)*") + "\n\n"
     text += "⚰️ **ÖLÜLER**\n" + ("\n".join(dead) if dead else "*(Henüz ölen yok)*")
     return text
+async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
+    # Eski liste mesajını sil
+    old_id = LAST_LIST_MSG.get(chat_id)
+    if old_id:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=old_id)
+        except:
+            pass  # Silinemeyebilir (yetki / eski msg vs)
+
+    # Yeni listeyi gönder
+    new_msg = await update.message.reply_text(get_list_text(chat_id), parse_mode="Markdown")
+    LAST_LIST_MSG[chat_id] = new_msg.message_id
 
 
 # ✅ Webhook temizle
@@ -570,9 +584,34 @@ async def track_any_group_message(update: Update, context: ContextTypes.DEFAULT_
         if key not in BOT_GROUPS:
             BOT_GROUPS[key] = {"title": chat.title or "NoTitle", "type": chat.type}
             save_groups(BOT_GROUPS)
+async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    user = update.effective_user
+    if not context.args:
+        return
+
+    full_input = " ".join(context.args).lower()
+    first_word = context.args[0].lower()
+    emoji = ROLE_EMOJIS.get(first_word, "👤")
+
+    if chat_id not in game_data:
+        game_data[chat_id] = {}
+
+    game_data[chat_id][user.id] = {
+        "name": user.first_name,
+        "role": full_input.capitalize(),
+        "emoji": emoji,
+        "alive": True
+    }
+
+    await send_updated_list(update, context, chat_id)
+async def roller_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    await send_updated_list(update, context, chat_id)
 
 
 async def groups_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
     user = update.effective_user
     if not user:
         return
@@ -586,7 +625,7 @@ async def groups_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     lines = [f"• {info['title']} | ID: `{gid}`" for gid, info in BOT_GROUPS.items()]
     text = "✅ Botun bulunduğu gruplar:\n\n" + "\n".join(lines)
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await send_updated_list(update, context,chat_id)
 
 
 async def dc_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -684,26 +723,6 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
                 parse_mode="Markdown"
             )
 
-async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    user = update.effective_user
-    if not context.args:
-        return
-
-    full_input = " ".join(context.args).lower()
-    first_word = context.args[0].lower()
-    emoji = ROLE_EMOJIS.get(first_word, "👤")
-
-    if chat_id not in game_data:
-        game_data[chat_id] = {}
-
-    game_data[chat_id][user.id] = {
-        "name": user.first_name,
-        "role": full_input.capitalize(),
-        "emoji": emoji,
-        "alive": True
-    }
-    await update.message.reply_text(get_list_text(chat_id), parse_mode="Markdown")
 
 
 async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -741,7 +760,8 @@ if __name__ == '__main__':
 
     # Mevcut komutlar
     app.add_handler(CommandHandler("rol", rol_ekle))
-    app.add_handler(CommandHandler("roller", lambda u, c: u.message.reply_text(get_list_text(u.effective_chat.id), parse_mode="Markdown")))
+    app.add_handler(CommandHandler("roller", roller_cmd))
+
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("dc", dc_komut))
 
