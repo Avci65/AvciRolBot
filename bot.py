@@ -18,7 +18,7 @@ from telegram.ext import (
 ROLE_EMOJIS = {
  "tavcı": "💂", "yancı": "💋", "melek": "👼", "mafya":"🤵🏽‍♂️", "gözcü": "👳‍♀️",
     "otacı": "🍃", "muhtar": "🎖", "silah": "🔫", "silahşör": "🔫","prens": "👑", "prenses": "👑",
-    "çiftçi": "👨‍🌾", "barışcıl": "☮️", "demirci": "⚒", "çığırtkan": "📰","Tuğba":"🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🌲","tuğba":"🌲",
+    "çiftçi": "👨‍🌾", "barışcıl": "☮️", "demirci": "⚒", "çığırtkan": "📰","Tuğba":"🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🌲","tuğba":"🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🎄🌲🌲",
     "uyutucu": "💤", "şifacı": "🌟", "korsan": "🏴‍☠️", "apps": "🙇", "kahin": "🌀","oduncu1s":"🪓","histerik":"👨‍🎤",
     "tilki": "🦊", "avcı": "🎯", "yb": "👵🏻", "sarhoş": "🍻", "mason": "👷","ışıl":"🪄","avci": "🎯",
     "seyirci": "👁", "hayalet": "👻", "şaşı": "👀", "ug": "😴", "ateist": "👦",
@@ -27,7 +27,7 @@ ROLE_EMOJIS = {
     "lanetli": "😾", "kurtadam": "🐺", "kürt": "🐺", "alfa": "⚡️", "lycan": "🐺🌝","gül":"🌹BERKE",
     "yavru": "🐶", "kuduz": "🤢", "hızlı": "💨", "sk": "🔪", "kundak": "🔥","kyura" :"🕊","berke":"❤️❤️‍🔥🥰😍🫦👄💗💕😻",
     "çg": "🎭", "tarikat": "👤", "polis": "👮", "burçin": "👮", "kocakafa": "😏","sgy": "👁","sgv": "👁👳‍♀️",
-    "kk": "😏", "kurucu": "🧔🏻‍♂️", "nöbet": "🦉", "hüs": "🕺🏿", "barış": "☮️", "kurdumsu": "👱🌚✨","köylü":"👱","sude":"🏃🏿 🦧 🤱🏻"
+    "kk": "😏", "kurucu": "🧔🏻‍♂️", "nöbet": "🦉", "hüs": "🕺🏿", "barış": "☮️", "kurdumsu": "👱🌚✨","köylü":"👱","sude":"🏃🏿🪠 🫵🏽🦧 🤱🏻"
 }
 
 # Doğruluk ve Cesaret Soruları (SENİN LİSTELERİN AYNEN DURUYOR)
@@ -185,7 +185,6 @@ D_SORULARI = [
     "Hayatında en çok hangi şeyi gizledin?",
     "Bugüne kadar en çok hangi şeyi sakladın?",
     "Bugüne kadar en çok hangi şeyi itiraf ettin?",
-    "Grupta en çok Sude’yi sevmenin güzel hissini anlatır mısın?",
     "Biri seni hiç tanımadan sadece mesajlarına baksa sence nasıl biri derdi?",
     "Hayatında 'keşke hiç yapmasaydım' dediğin bir şey var mı?",
     "Son 1 yılda en çok değiştiğin konu ne?",
@@ -435,7 +434,6 @@ C_SORULARI = [
     "Birini seç: onun hakkında 1 dakika boyunca sadece olumlu şeyler söyle (spam değil, kaliteli).",
     "Gruba 'ben artık bir yapay zekayım' yaz ve 5 mesaj robot gibi cevap ver.",
     "Grupta biri için 'reklam filmi' yaz: ürün o kişi olsun.",
-    "Grupta birinin adını bir şehre çevir: 'Sude Cumhuriyeti' gibi ve özelliklerini yaz.",
     "Gruba bir sahne yaz: herkesin rolü olsun (sen yönetmensin).",
     "Grupta birine 'bugün sana hayran kaldım' yaz ama nedenini 10 dakika sonra söyle.",
 
@@ -759,8 +757,9 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("groups", groups_cmd))
 
     # Mevcut komutlar
-    app.add_handler(CommandHandler("rol", rol_ekle))
+    app.add_handler(CommandHandler(["rol", "r"], rol_ekle))
     app.add_handler(CommandHandler("roller", roller_cmd))
+
 
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("dc", dc_komut))
