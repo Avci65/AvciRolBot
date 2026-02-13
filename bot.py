@@ -666,7 +666,9 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
         game_data[chat_id] = {}
         await msg.reply_text(
             "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
-            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ "
+            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ " 
+            "trip atan /kickme atsın yormasın."\
+            ""
         )
         return
 
