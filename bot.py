@@ -666,7 +666,7 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
         game_data[chat_id] = {}
         await msg.reply_text(
             "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
-            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ " 
+            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ \n" 
             "trip atan /kickme atsın yormasın."\
             ""
         )
@@ -759,7 +759,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("groups", groups_cmd))
 
     # Mevcut komutlar
-    app.add_handler(CommandHandler(["rol", "r"], rol_ekle))
+    app.add_handler(CommandHandler(["rol", "r","claim"], rol_ekle))
     app.add_handler(CommandHandler("roller", roller_cmd))
 
 
