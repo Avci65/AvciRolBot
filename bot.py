@@ -4,6 +4,8 @@ import random
 import json
 import requests
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
 
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -512,30 +514,36 @@ def get_prayer_times(city: str):
         url = f"https://api.aladhan.com/v1/timingsByCity?city={city}&country=Turkey&method=13"
         r = requests.get(url, timeout=10)
         data = r.json()
+
         timings = data["data"]["timings"]
+        tz = data["data"]["meta"]["timezone"]  # örn: "Europe/Istanbul"
 
         return {
             "imsak": timings["Imsak"][:5],
-            "iftar": timings["Maghrib"][:5]
+            "iftar": timings["Maghrib"][:5],
+            "tz": tz
         }
     except Exception as e:
         print("Vakit API hata:", e)
         return None
 
+def calculate_remaining(time_str: str, tz_name: str):
+    tz = ZoneInfo(tz_name)
+    now = datetime.now(tz)
 
-def calculate_remaining(time_str):
-    now = datetime.now()
     h, m = map(int, time_str.split(":"))
     target = now.replace(hour=h, minute=m, second=0, microsecond=0)
 
-    if target < now:
+    if target <= now:
         target += timedelta(days=1)
 
     diff = target - now
-    hours, remainder = divmod(diff.seconds, 3600)
-    minutes = remainder // 60
+    total_minutes = int(diff.total_seconds() // 60)
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
 
     return f"{hours} saat {minutes} dakika"
+
 
 BOT_GROUPS = load_groups()
 game_data = {}
@@ -795,7 +803,8 @@ async def iftar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Şehir bulunamadı.")
         return
 
-    kalan = calculate_remaining(vakit["iftar"])
+    kalan = calculate_remaining(vakit["iftar"], vakit["tz"])
+
 
     text = (
         "🌙 **İftar ve Sahur Vakitleri**\n"
@@ -824,7 +833,8 @@ async def sahur_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Şehir bulunamadı.")
         return
 
-    kalan = calculate_remaining(vakit["imsak"])
+    kalan = calculate_remaining(vakit["imsak"], vakit["tz"])
+
 
     text = (
         f"📍 **{city.title()}**\n\n"
