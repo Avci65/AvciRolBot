@@ -2,6 +2,9 @@ import os
 import re
 import random
 import json
+import requests
+from datetime import datetime, timedelta
+
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -475,6 +478,21 @@ C_SORULARI = [
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 GROUP_DB_FILE = os.getenv("GROUP_DB_FILE", "groups.json")
+USER_CITY_FILE = "user_cities.json"
+
+def load_user_cities():
+    try:
+        with open(USER_CITY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {}
+
+def save_user_cities(data):
+    with open(USER_CITY_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+USER_CITIES = load_user_cities()
+
 
 
 def load_groups():
@@ -489,6 +507,35 @@ def save_groups(data):
     with open(GROUP_DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def get_prayer_times(city: str):
+    try:
+        url = f"https://api.aladhan.com/v1/timingsByCity?city={city}&country=Turkey&method=13"
+        r = requests.get(url, timeout=10)
+        data = r.json()
+        timings = data["data"]["timings"]
+
+        return {
+            "imsak": timings["Imsak"][:5],
+            "iftar": timings["Maghrib"][:5]
+        }
+    except Exception as e:
+        print("Vakit API hata:", e)
+        return None
+
+
+def calculate_remaining(time_str):
+    now = datetime.now()
+    h, m = map(int, time_str.split(":"))
+    target = now.replace(hour=h, minute=m, second=0, microsecond=0)
+
+    if target < now:
+        target += timedelta(days=1)
+
+    diff = target - now
+    hours, remainder = divmod(diff.seconds, 3600)
+    minutes = remainder // 60
+
+    return f"{hours} saat {minutes} dakika"
 
 BOT_GROUPS = load_groups()
 game_data = {}
@@ -729,6 +776,66 @@ async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_data[update.effective_chat.id] = {}
     await update.message.reply_text("✅ Roller temizlendi!")
 
+async def iftar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if context.args:
+        city = context.args[0].lower()
+        USER_CITIES[user_id] = city
+        save_user_cities(USER_CITIES)
+    else:
+        city = USER_CITIES.get(user_id)
+
+    if not city:
+        await update.message.reply_text("❌ Önce şehir gir.\nÖrnek: /iftar van")
+        return
+
+    vakit = get_prayer_times(city)
+    if not vakit:
+        await update.message.reply_text("❌ Şehir bulunamadı.")
+        return
+
+    kalan = calculate_remaining(vakit["iftar"])
+
+    text = (
+        "🌙 **İftar ve Sahur Vakitleri**\n"
+        f"📍 **{city.title()}**\n\n"
+        f"🌇 İftar Saati: {vakit['iftar']}\n"
+        f"⏳ Kalan Süre: {kalan}"
+    )
+
+    await update.message.reply_text(text, parse_mode="Markdown")
+async def sahur_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if context.args:
+        city = context.args[0].lower()
+        USER_CITIES[user_id] = city
+        save_user_cities(USER_CITIES)
+    else:
+        city = USER_CITIES.get(user_id)
+
+    if not city:
+        await update.message.reply_text("❌ Önce şehir gir.\nÖrnek: /sahur van")
+        return
+
+    vakit = get_prayer_times(city)
+    if not vakit:
+        await update.message.reply_text("❌ Şehir bulunamadı.")
+        return
+
+    kalan = calculate_remaining(vakit["imsak"])
+
+    text = (
+        "🌙 **İftar ve Sahur Vakitleri**\n"
+        f"📍 **{city.title()}**\n\n"
+        f"🌅 Sahur (İmsak): {vakit['imsak']}\n"
+        f"⏳ Kalan Süre: {kalan}"
+    )
+
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+
 
 if __name__ == '__main__':
     print("✅ Bot başlatılıyor...")
@@ -761,6 +868,9 @@ if __name__ == '__main__':
     # Mevcut komutlar
     app.add_handler(CommandHandler(["rol", "r","claim"], rol_ekle))
     app.add_handler(CommandHandler("roller", roller_cmd))
+    app.add_handler(CommandHandler("iftar", iftar_cmd)) 
+    app.add_handler(CommandHandler("sahur", sahur_cmd))
+
 
 
     app.add_handler(CommandHandler("temizle", temizle_komut))
