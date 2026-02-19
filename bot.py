@@ -827,7 +827,6 @@ async def sahur_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kalan = calculate_remaining(vakit["imsak"])
 
     text = (
-        "🌙 **İftar ve Sahur Vakitleri**\n"
         f"📍 **{city.title()}**\n\n"
         f"🌅 Sahur (İmsak): {vakit['imsak']}\n"
         f"⏳ Kalan Süre: {kalan}"
