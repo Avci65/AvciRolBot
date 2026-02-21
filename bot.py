@@ -526,6 +526,9 @@ def get_prayer_times(city: str):
     except Exception as e:
         print("Vakit API hata:", e)
         return None
+    
+def is_owner(user_id: int) -> bool:
+    return user_id == OWNER_ID
 
 def calculate_remaining(time_str: str, tz_name: str):
     tz = ZoneInfo(tz_name)
@@ -606,6 +609,21 @@ async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot aktif çalışıyor!")
 
 
+
+async def forcestart_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    chat = update.effective_chat
+    msg = update.effective_message
+
+    # ❌ owner değilse tamamen sessiz çık
+    if user.id != OWNER_ID:
+        return
+
+    # 🧹 komutu sil (yetki varsa)
+    try:
+        await msg.delete()
+    except:
+        pass
 
 async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
@@ -879,6 +897,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("roller", roller_cmd))
     app.add_handler(CommandHandler("iftar", iftar_cmd)) 
     app.add_handler(CommandHandler("sahur", sahur_cmd))
+    app.add_handler(CommandHandler("forcestart", forcestart_cmd))
 
 
 
