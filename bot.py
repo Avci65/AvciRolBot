@@ -615,17 +615,21 @@ async def forcestart_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     msg = update.effective_message
 
+    # ❌ sadece owner
     if user.id != OWNER_ID:
         return
 
-    # komutu sil
+    # 🧹 senin komutu sil
     try:
         await msg.delete()
     except:
         pass
 
-    # ⭐ Rol botunu tetikle
-    await context.bot.send_message(chat.id, "/forcestart@Caperubetabotd")
+    # 🎯 Rol botunu tetikle (ASIL OLAY)
+    await context.bot.send_message(
+        chat_id=chat.id,
+        text="/forcestart@Caperubetabot"
+    )
 
 async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
