@@ -615,22 +615,25 @@ async def forcestart_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     msg = update.effective_message
 
-    # ❌ sadece owner
+    # sadece owner
     if user.id != OWNER_ID:
         return
 
-    # 🧹 senin komutu sil
+    # komutunu sil
     try:
         await msg.delete()
     except:
         pass
 
-    # 🎯 Rol botunu tetikle (ASIL OLAY)
-    await context.bot.send_message(
+    # gruba rol bot komutunu yaz
+    sent = await context.bot.send_message(
         chat_id=chat.id,
         text="/forcestart@Caperubetabot"
     )
 
+    # istersen bunu da gizleyebiliriz (opsiyonel)
+    # await asyncio.sleep(1)
+    # await sent.delete()
 async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     my_member = update.my_chat_member
