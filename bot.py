@@ -5,7 +5,7 @@ import json
 import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-
+import httpx    
 
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -747,10 +747,7 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
     if t == "startranked" or t.startswith("/startranked"):
         game_data[chat_id] = {}
         await msg.reply_text(
-            "✅ Yeni oyun tespit edildi, roller temizlendi!\n"
-            "Uyarı⚠️⚠️: KANITLI ROL DEĞİLSEN LİNÇ EDİLEBİLİRSİN İSİME OYNANMIYOR⚠️⚠️ \n" 
-            "trip atan /kickme atsın yormasın."\
-            ""
+            "✅ Yeni oyun tespit edildi, roller temizlendi!"
         )
         return
 
