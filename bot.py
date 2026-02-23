@@ -939,7 +939,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("iftar", iftar_cmd)) 
     app.add_handler(CommandHandler("sahur", sahur_cmd))
     app.add_handler(CommandHandler("forcestart", forcestart_cmd))
-    app.add_handler(CommandHandler(["ölü", "olu", "dead"], olu_komut))
+    app.add_handler(CommandHandler(["ölü", "olu", "dead","kill"], olu_komut))
 
 
 
