@@ -566,7 +566,6 @@ def get_list_text(chat_id):
             dead.append(f"☠️ {line}")
     text = "📜 **GÜNCEL DURUM LİSTESİ**\n\n"
     text += "✨ **YAŞAYANLAR**\n" + ("\n".join(living) if living else "*(Kimse yok)*") + "\n\n"
-    text += "⚰️ **ÖLÜLER**\n" + ("\n".join(dead) if dead else "*(Henüz ölen yok)*")
     return text
 async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
     # Eski liste mesajını sil
