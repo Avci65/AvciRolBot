@@ -726,7 +726,42 @@ async def dc_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'dc_c':
         soru = random.choice(C_SORULARI)
         await query.edit_message_text(f"🔥 **Cesaret:**\n\n{soru}")
+async def olu_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    msg = update.effective_message
 
+    if chat_id not in game_data:
+        return
+
+    target_user_id = None
+
+    # ✅ reply ile
+    if msg.reply_to_message:
+        target_user_id = msg.reply_to_message.from_user.id
+
+    # ✅ mention ile
+    elif context.args:
+        mention = context.args[0].lower().replace("@", "")
+
+        for uid, data in game_data[chat_id].items():
+            name = (data.get("name") or "").lower()
+
+            if mention in name:
+                target_user_id = uid
+                break
+
+    if not target_user_id:
+        return
+
+    # oyuncu listede yoksa çık
+    if target_user_id not in game_data[chat_id]:
+        return
+
+    # 🔥 TAMAMEN SİL
+    del game_data[chat_id][target_user_id]
+
+    # listeyi güncelle
+    await send_updated_list(update, context, chat_id)
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
@@ -904,6 +939,7 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("iftar", iftar_cmd)) 
     app.add_handler(CommandHandler("sahur", sahur_cmd))
     app.add_handler(CommandHandler("forcestart", forcestart_cmd))
+    app.add_handler(CommandHandler(["ölü", "olu", "dead"], olu_komut))
 
 
 
