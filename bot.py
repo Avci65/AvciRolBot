@@ -557,15 +557,24 @@ LAST_LIST_MSG = {}
 def get_list_text(chat_id):
     if chat_id not in game_data or not game_data[chat_id]:
         return "ℹ️ Henüz hiç rol girilmemiş."
-    living, dead = [], []
-    for uid, data in game_data[chat_id].items():
-        line = f"👤 {data['name']}: {data['role']} {data['emoji']}"
-        if data['alive']:
-            living.append(f"❣️ {line}")
-        else:
-            dead.append(f"☠️ {line}")
+
+    living = []
+
+    # sadece yaşayanları al
+    alive_players = [
+        data for data in game_data[chat_id].values()
+        if data.get("alive", True)
+    ]
+
+    # ✅ numaralandırma
+    for i, data in enumerate(alive_players, start=1):
+        line = f"{i}. 👤 {data['name']}: {data['role']} {data['emoji']}"
+        living.append(line)
+
     text = "📜 **GÜNCEL DURUM LİSTESİ**\n\n"
-    text += "✨ **YAŞAYANLAR**\n" + ("\n".join(living) if living else "*(Kimse yok)*") + "\n\n"
+    text += "✨ **YAŞAYANLAR**\n"
+    text += "\n".join(living) if living else "*(Kimse yok)*"
+
     return text
 async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
     # Eski liste mesajını sil
