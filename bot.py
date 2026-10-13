@@ -5,8 +5,9 @@ import json
 import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-import httpx    
-
+import httpx 
+import threading
+from flask import Flask
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -18,6 +19,17 @@ from telegram.ext import (
     ChatMemberHandler,
     filters
 )
+
+# Render port isteğini karşılamak için mini web sunucusu
+web_app = Flask(__name__)
+
+@web_app.route('/')
+def home():
+    return "Bot aktif ve çalışıyor!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    web_app.run(host="0.0.0.0", port=port)
 
 # Rol ve Emoji Kütüphanesi
 ROLE_EMOJIS = {
@@ -35,9 +47,9 @@ ROLE_EMOJIS = {
     "kk": "😏", "kurucu": "🧔🏻‍♂️", "nöbet": "🦉", "barış": "☮️", "kurdumsu": "👱🌚✨","köylü":"👱",
 }
 
-# Doğruluk ve Cesaret Soruları (SENİN LİSTELERİN AYNEN DURUYOR)
+# Doğruluk ve Cesaret Soruları
 D_SORULARI = [
-     "En büyük hayalin nedir?",
+    "En büyük hayalin nedir?",
     "Hiç birinden nefret ettin mi?",
     "En son kime yalan söyledin?",
     "En utanç verici anın nedir?",
@@ -210,7 +222,6 @@ D_SORULARI = [
     "Birinin davranışını yanlış anlayıp gereksiz kırıldığın oldu mu?",
     "Seni en çok korkutan ihtimal ne: yalnız kalmak mı, yanlış biriyle kalmak mı?",
     "Kendinle ilgili değiştirmek isteyip de değiştiremediğin şey ne?",
-
     "Birine mesaj atmak isteyip gururundan atmadığın oldu mu?",
     "Birinin seni unutmasından korktuğun oldu mu?",
     "En son ne zaman 'ben haklıydım' diye içinden sevindin?",
@@ -221,7 +232,6 @@ D_SORULARI = [
     "Birinin hayatından çıkması sana iyi geldi mi hiç?",
     "Sevmediğin halde sırf yalnız kalmamak için birine katlandığın oldu mu?",
     "Şu an hayatındaki en büyük karmaşa ne?",
-
     "Bir şarkı seni anlatıyor olsa hangi duyguyu anlatırdı?",
     "Kendini en çok hangi ortamda sahte hissediyorsun?",
     "İnsanların senin hakkında en yanlış bildiği şey ne?",
@@ -232,7 +242,6 @@ D_SORULARI = [
     "Sence aşk mı daha zor, arkadaşlık mı?",
     "Birini özleyip yine de geri dönmemek zorunda kaldın mı?",
     "Hiç sırf birinin dikkatini çekmek için farklı davrandığın oldu mu?",
-
     "Sence senin en tehlikeli yönün ne?",
     "Seni en kolay manipüle eden şey ne? (ilgi, sevgi, para, yalnızlık vs.)",
     "Biri sana 'sen değiştin' dese bu seni üzer mi yoksa mutlu mu eder?",
@@ -243,7 +252,6 @@ D_SORULARI = [
     "Dışarıdan güçlü görünsen de içten içe kırıldığın şey ne?",
     "En son ne zaman birine 'gerçekten' güvenmek istedin?",
     "İçten içe keşke hiç tanışmasaydım dediğin biri var mı?",
-
     "Sence insanlar seni neden yanlış anlıyor?",
     "Kendini en çok ne zaman yalnız hissediyorsun?",
     "Hayatında en çok neye tutunuyorsun?",
@@ -420,7 +428,6 @@ C_SORULARI = [
     "Grupta bir kişiye 'Bugün seninle düşmanız (şaka)' yaz ve 2 mesaj atış.",
     "Bir mesaj yaz: 'Bunu yazmak yasak ama...' ve tamamen gereksiz bir şey söyle.",
     "Grupta kendini 1 günlüğüne farklı bir isimle tanıt (sadece grupta).",
-
     "Grupta '1 dakikalık sessizlik' ilan et ve kim bozarsa ona görev ver.",
     "Birine, onunla ilgili çok doğru bir tahmin yap (çaktırmadan psikolojik analiz).",
     "Grupta bir kelime seç ve herkes o kelimeyi kullanmadan konuşmaya çalışsın.",
@@ -431,7 +438,6 @@ C_SORULARI = [
     "Grupta birine 'şu an sana görünmez bir hediye veriyorum' yaz ve ne olduğunu hayal ettir.",
     "Gruba bir paragraf yaz ama her kelimenin ilk harfi senin ismini oluştursun (akrostiş).",
     "Birini seç: onun hakkında 3 tane 'yanlış ama komik' gerçek uydur.",
-
     "Grupta bir mesaj at: 'Ben bu grubun gizli ajanıyım' ve kendine görev uydur.",
     "Grupta birinin yazdığı son mesajı al ve onu 'atasözü' gibi yeniden yaz.",
     "Gruba 3 maddelik 'grup manifestosu' yaz (komik ama ciddi).",
@@ -441,7 +447,6 @@ C_SORULARI = [
     "Grupta biri için 'reklam filmi' yaz: ürün o kişi olsun.",
     "Gruba bir sahne yaz: herkesin rolü olsun (sen yönetmensin).",
     "Grupta birine 'bugün sana hayran kaldım' yaz ama nedenini 10 dakika sonra söyle.",
-
     "Gruba 'tarihte bugün' diye tamamen uydurma bir olay yaz.",
     "Grupta birini seç ve onun adına 1 cümlelik 'slogan' üret.",
     "Grupta bir mesaj at: 'Benimle konuşan herkes +10 şans alıyor' yaz.",
@@ -452,7 +457,6 @@ C_SORULARI = [
     "Gruba kısa bir 'mahkeme' aç: birini komik suçla itham et (örn: fazla cool olmak).",
     "Grupta birine 'Seni suçlu buluyorum' yaz ve suçunu tamamen komik yaz.",
     "Gruptaki en ciddi kişiye saçma ama mantıklı bir soruyla meydan oku.",
-
     "Gruba 1 satır yaz: 'Bu mesajın altına kim yazarsa şansı açılır' yaz.",
     "Grupta birini seç: onunla ilgili bir 'efsane' yaz (mitoloji gibi).",
     "Grupta 'bugün herkes kendine yeni bir isim seçsin' diye başlat.",
@@ -463,7 +467,6 @@ C_SORULARI = [
     "Grupta 'gizli görev dağıtıyorum' yaz ve herkese 1 küçük görev ver.",
     "Gruba '2 dakika boyunca sadece komik gerçekler yazıyoruz' yaz ve başlat.",
     "Gruba 1 cümlelik 'korku hikayesi' yaz ama komik bitir.",
-
     "Grupta birinin son yazdığı kelimeyi alıp 3 farklı anlam uydur.",
     "Grupta birine 'seni terfi ettirdim' yaz ve yeni ünvan ver.",
     "Gruba bir mesaj yaz ama her kelimenin harflerini karıştır (okumaya çalışsınlar).",
@@ -476,7 +479,7 @@ C_SORULARI = [
     "Grupta bir mesaj at: 'Ben artık bu grubun moderatörüyüm' ve 1 kural koy."
 ]
 
-# --- Railway ENV ---
+# --- ENV ---
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 GROUP_DB_FILE = os.getenv("GROUP_DB_FILE", "groups.json")
@@ -495,15 +498,12 @@ def save_user_cities(data):
 
 USER_CITIES = load_user_cities()
 
-
-
 def load_groups():
     try:
         with open(GROUP_DB_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except:
         return {}
-
 
 def save_groups(data):
     with open(GROUP_DB_FILE, "w", encoding="utf-8") as f:
@@ -514,10 +514,8 @@ def get_prayer_times(city: str):
         url = f"https://api.aladhan.com/v1/timingsByCity?city={city}&country=Turkey&method=13"
         r = requests.get(url, timeout=10)
         data = r.json()
-
         timings = data["data"]["timings"]
-        tz = data["data"]["meta"]["timezone"]  # örn: "Europe/Istanbul"
-
+        tz = data["data"]["meta"]["timezone"]
         return {
             "imsak": timings["Imsak"][:5],
             "iftar": timings["Maghrib"][:5],
@@ -533,64 +531,46 @@ def is_owner(user_id: int) -> bool:
 def calculate_remaining(time_str: str, tz_name: str):
     tz = ZoneInfo(tz_name)
     now = datetime.now(tz)
-
     h, m = map(int, time_str.split(":"))
     target = now.replace(hour=h, minute=m, second=0, microsecond=0)
-
     if target <= now:
         target += timedelta(days=1)
-
     diff = target - now
     total_minutes = int(diff.total_seconds() // 60)
     hours = total_minutes // 60
     minutes = total_minutes % 60
-
     return f"{hours} saat {minutes} dakika"
-
 
 BOT_GROUPS = load_groups()
 game_data = {}
 LAST_LIST_MSG = {}
 
-
-
 def get_list_text(chat_id):
     if chat_id not in game_data or not game_data[chat_id]:
         return "ℹ️ Henüz hiç rol girilmemiş."
-
     living = []
-
-    # sadece yaşayanları al
     alive_players = [
         data for data in game_data[chat_id].values()
         if data.get("alive", True)
     ]
-
-    # ✅ numaralandırma
     for i, data in enumerate(alive_players, start=1):
         line = f"{i}. 👤 {data['name']}: {data['role']} {data['emoji']}"
         living.append(line)
-
     text = "📜 **GÜNCEL DURUM LİSTESİ**\n\n"
     text += "✨ **YAŞAYANLAR**\n"
     text += "\n".join(living) if living else "*(Kimse yok)*"
-
     return text
+
 async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
-    # Eski liste mesajını sil
     old_id = LAST_LIST_MSG.get(chat_id)
     if old_id:
         try:
             await context.bot.delete_message(chat_id=chat_id, message_id=old_id)
         except:
-            pass  # Silinemeyebilir (yetki / eski msg vs)
-
-    # Yeni listeyi gönder
+            pass
     new_msg = await update.message.reply_text(get_list_text(chat_id), parse_mode="Markdown")
     LAST_LIST_MSG[chat_id] = new_msg.message_id
 
-
-# ✅ Webhook temizle
 async def post_init(application):
     try:
         await application.bot.delete_webhook(drop_pending_updates=True)
@@ -598,8 +578,6 @@ async def post_init(application):
     except Exception as e:
         print("⚠️ Webhook temizlenemedi:", e)
 
-
-# ✅ Debug
 async def debug_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         chat = update.effective_chat
@@ -611,110 +589,82 @@ async def debug_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print("DEBUG ERROR:", e)
 
-
-# ✅ /ping
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("✅ Bot aktif çalışıyor!")
-
-
 
 async def forcestart_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat = update.effective_chat
     msg = update.effective_message
-
-    # sadece owner
     if user.id != OWNER_ID:
         return
-
-    # komutunu sil
     try:
         await msg.delete()
     except:
         pass
-
-    # gruba rol bot komutunu yaz
     sent = await context.bot.send_message(
         chat_id=chat.id,
         text="/forcestart@Caperubetabot"
     )
 
-    # istersen bunu da gizleyebiliriz (opsiyonel)
-    # await asyncio.sleep(1)
-    # await sent.delete()
 async def track_bot_membership(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     my_member = update.my_chat_member
     if not chat or not my_member:
         return
-
     if chat.type not in ("group", "supergroup"):
         return
-
     new_status = my_member.new_chat_member.status
-
     if new_status in ("member", "administrator"):
         BOT_GROUPS[str(chat.id)] = {"title": chat.title or "NoTitle", "type": chat.type}
         save_groups(BOT_GROUPS)
-
     elif new_status in ("left", "kicked"):
         BOT_GROUPS.pop(str(chat.id), None)
         save_groups(BOT_GROUPS)
-
 
 async def track_any_group_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat = update.effective_chat
     if not chat:
         return
-
     if chat.type in ("group", "supergroup"):
         key = str(chat.id)
         if key not in BOT_GROUPS:
             BOT_GROUPS[key] = {"title": chat.title or "NoTitle", "type": chat.type}
             save_groups(BOT_GROUPS)
+
 async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user = update.effective_user
     if not context.args:
         return
-
     full_input = " ".join(context.args).lower()
     first_word = context.args[0].lower()
     emoji = ROLE_EMOJIS.get(first_word, "👤")
-
     if chat_id not in game_data:
         game_data[chat_id] = {}
-
     game_data[chat_id][user.id] = {
         "name": user.first_name,
         "role": full_input.capitalize(),
         "emoji": emoji,
         "alive": True
     }
-
     await send_updated_list(update, context, chat_id)
+
 async def roller_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     await send_updated_list(update, context, chat_id)
 
-
 async def groups_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     user = update.effective_user
-    if not user:
+    if not user or user.id != OWNER_ID:
         return
-
-    if user.id != OWNER_ID:
-        return
-
     if not BOT_GROUPS:
         await update.message.reply_text("📌 Kayıtlı grup yok.")
         return
-
     lines = [f"• {info['title']} | ID: `{gid}`" for gid, info in BOT_GROUPS.items()]
     text = "✅ Botun bulunduğu gruplar:\n\n" + "\n".join(lines)
-    await send_updated_list(update, context,chat_id)
-
+    await send_updated_list(update, context, chat_id)
 
 async def dc_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
@@ -723,129 +673,78 @@ async def dc_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]]
     await update.message.reply_text("Seç bakalım:", reply_markup=InlineKeyboardMarkup(keyboard))
 
-
 async def dc_button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-
     if query.data == 'dc_d':
         soru = random.choice(D_SORULARI)
         await query.edit_message_text(f"✨ **Doğruluk:**\n\n{soru}")
     elif query.data == 'dc_c':
         soru = random.choice(C_SORULARI)
         await query.edit_message_text(f"🔥 **Cesaret:**\n\n{soru}")
+
 async def olu_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     msg = update.effective_message
-
     if chat_id not in game_data:
         return
-
     target_user_id = None
-
-    # ✅ reply ile
     if msg.reply_to_message:
         target_user_id = msg.reply_to_message.from_user.id
-
-    # ✅ mention ile
     elif context.args:
         mention = context.args[0].lower().replace("@", "")
-
         for uid, data in game_data[chat_id].items():
             name = (data.get("name") or "").lower()
-
             if mention in name:
                 target_user_id = uid
                 break
-
-    if not target_user_id:
+    if not target_user_id or target_user_id not in game_data[chat_id]:
         return
-
-    # oyuncu listede yoksa çık
-    if target_user_id not in game_data[chat_id]:
-        return
-
-    # 🔥 TAMAMEN SİL
     del game_data[chat_id][target_user_id]
-
-    # listeyi güncelle
     await send_updated_list(update, context, chat_id)
+
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
         return
-
     text = msg.text if msg.text else (msg.caption if msg.caption else "")
     if not text:
         return
-
     chat_id = update.effective_chat.id
     t = text.strip().lower()
-
-    # ✅ STARTRANKEDİ MESAJDAN YAKALA (komut şart değil)
-    # örnekler:
-    # startranked
-    # /startranked
-    # /startranked@caperubetabot
     if t == "startranked" or t.startswith("/startranked"):
         game_data[chat_id] = {}
-        await msg.reply_text(
-            "✅ Yeni oyun tespit edildi, roller temizlendi!"
-        )
+        await msg.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi!")
         return
-
-    # ✅ DİĞER KOMUTLARI BOŞVER (rol/dc/roller vs)
-    # böylece CommandHandler’lar düzgün çalışır
     if t.startswith("/") and not t.startswith("/startranked"):
         return
-
-    # ✅ Yeni format: "Ölü oyuncular: 1/5"
     if "ölü oyuncular:" in t:
         if chat_id not in game_data:
             return
-
         satirlar = text.splitlines()
-
         olu_isimleri = []
         for s in satirlar:
             s = s.strip()
-
-            # örn: "💀 Abdullah ⁪⁬⁮⁮⁮⁮ - Sarhoş 🍻"
             if s.startswith("💀"):
                 parca = s.replace("💀", "").strip()
-
-                # "-" öncesi isim kısmı
                 ad_kismi = parca.split("-")[0].strip()
-
-                # fazla boşlukları düzelt
                 ad_kismi = re.sub(r"\s+", " ", ad_kismi)
-
-                # görünmez unicode karakterleri temizle (çok önemli)
                 ad_kismi = re.sub(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f]", "", ad_kismi).strip()
-
                 if ad_kismi:
                     olu_isimleri.append(ad_kismi.lower())
-
-        print("☠️ Ölü tespit:", olu_isimleri)
-
         degisiklik = False
         for uid, data in game_data[chat_id].items():
             oyuncu_adi = (data.get("name") or "").lower().strip()
-
             for oluisim in olu_isimleri:
-                # esnek eşleştirme
                 if oyuncu_adi and (oyuncu_adi in oluisim or oluisim in oyuncu_adi):
                     if data.get("alive", True):
                         game_data[chat_id][uid]["alive"] = False
                         degisiklik = True
-
         if degisiklik:
             await msg.reply_text(
                 "📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id),
                 parse_mode="Markdown"
             )
-
-
 
 async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_data[update.effective_chat.id] = {}
@@ -853,65 +752,50 @@ async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def iftar_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-
     if context.args:
         city = context.args[0].lower()
         USER_CITIES[user_id] = city
         save_user_cities(USER_CITIES)
     else:
         city = USER_CITIES.get(user_id)
-
     if not city:
         await update.message.reply_text("❌ Önce şehir gir.\nÖrnek: /iftar van")
         return
-
     vakit = get_prayer_times(city)
     if not vakit:
         await update.message.reply_text("❌ Şehir bulunamadı.")
         return
-
     kalan = calculate_remaining(vakit["iftar"], vakit["tz"])
-
-
     text = (
         "🌙 **İftar ve Sahur Vakitleri**\n"
         f"📍 **{city.title()}**\n\n"
         f"🌇 İftar Saati: {vakit['iftar']}\n"
         f"⏳ Kalan Süre: {kalan}"
     )
-
     await update.message.reply_text(text, parse_mode="Markdown")
+
 async def sahur_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.effective_user.id)
-
     if context.args:
         city = context.args[0].lower()
         USER_CITIES[user_id] = city
         save_user_cities(USER_CITIES)
     else:
         city = USER_CITIES.get(user_id)
-
     if not city:
         await update.message.reply_text("❌ Önce şehir gir.\nÖrnek: /sahur van")
         return
-
     vakit = get_prayer_times(city)
     if not vakit:
         await update.message.reply_text("❌ Şehir bulunamadı.")
         return
-
     kalan = calculate_remaining(vakit["imsak"], vakit["tz"])
-
-
     text = (
         f"📍 **{city.title()}**\n\n"
         f"🌅 Sahur (İmsak): {vakit['imsak']}\n"
         f"⏳ Kalan Süre: {kalan}"
     )
-
     await update.message.reply_text(text, parse_mode="Markdown")
-
-
 
 if __name__ == '__main__':
     print("✅ Bot başlatılıyor...")
@@ -923,42 +807,30 @@ if __name__ == '__main__':
 
     print("✅ ENV okundu. OWNER_ID:", OWNER_ID)
 
+    # Render port hatası vermemesi için mini web sunucusunu arka planda başlatıyoruz
+    t = threading.Thread(target=run_web)
+    t.daemon = True
+    t.start()
+    print("✅ Web sunucusu port dinlemeye başladı.")
+
     app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
-    # Debug update log
+    # Handlers
     app.add_handler(MessageHandler(filters.ALL, debug_all), group=-1)
-
-    # Test
     app.add_handler(CommandHandler("ping", ping))
-
-   
-
-
-    # Grup kayıt
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_any_group_message))
-
-    # Owner-only
     app.add_handler(CommandHandler("groups", groups_cmd))
-
-    # Mevcut komutlar
-    app.add_handler(CommandHandler(["rol", "r","claim"], rol_ekle))
+    app.add_handler(CommandHandler(["rol", "r", "claim"], rol_ekle))
     app.add_handler(CommandHandler("roller", roller_cmd))
     app.add_handler(CommandHandler("iftar", iftar_cmd)) 
     app.add_handler(CommandHandler("sahur", sahur_cmd))
     app.add_handler(CommandHandler("forcestart", forcestart_cmd))
-    app.add_handler(CommandHandler(["olu", "dead", "kill","geber"], olu_komut))
-
-
-
+    app.add_handler(CommandHandler(["olu", "dead", "kill", "geber"], olu_komut))
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("dc", dc_komut))
-
     app.add_handler(CallbackQueryHandler(dc_button_handler))
-
-    # ✅ komut olmayan yazılar
     app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi))
-
 
     print("✅ Polling başlıyor...")
     app.run_polling(drop_pending_updates=True)
