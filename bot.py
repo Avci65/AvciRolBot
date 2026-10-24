@@ -2,6 +2,7 @@ import os
 import re
 import random
 import json
+import time
 import html
 import requests
 from datetime import datetime, timedelta
@@ -699,7 +700,21 @@ async def debug_all(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print("DEBUG ERROR:", e)
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("✅ Bot aktif çalışıyor!")
+    msg = update.effective_message
+    # 1) Mesajın gönderilmesinden botun görmesine kadar geçen süre (saniye hassasiyetli)
+    #    Render uykudan uyanırken burası uzar.
+    gecikme = (datetime.now(msg.date.tzinfo) - msg.date).total_seconds()
+
+    # 2) Telegram'a gidip gelme süresi (ms)
+    t0 = time.perf_counter()
+    cevap = await msg.reply_text("🏓 Pong!")
+    rtt_ms = (time.perf_counter() - t0) * 1000
+
+    await cevap.edit_text(
+        "🏓 Pong!\n"
+        f"⚡ Telegram yanıt süresi: {rtt_ms:.0f} ms\n"
+        f"📨 Mesajı görme gecikmesi: {max(gecikme, 0):.1f} sn"
+    )
 
 async def forcestart_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -829,9 +844,7 @@ async def oluler_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.reply_text("↩️ Caperubeta'nın 'Ölü oyuncular' mesajına yanıt vererek /oluler yaz.")
         return
     chat_id = update.effective_chat.id
-    yeni_olenler = olu_listesini_isle(chat_id, hedef)
-    if yeni_olenler:
-        await msg.reply_text(olum_duyurusu(yeni_olenler), parse_mode="HTML")
+    olu_listesini_isle(chat_id, hedef)
     await send_updated_list(update, context, chat_id)
 
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -855,7 +868,6 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
             return
         yeni_olenler = olu_listesini_isle(chat_id, msg)
         if yeni_olenler:
-            await msg.reply_text(olum_duyurusu(yeni_olenler), parse_mode="HTML")
             await send_updated_list(update, context, chat_id)
         return
 
