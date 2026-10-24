@@ -561,6 +561,67 @@ def get_list_text(chat_id):
     text += "\n".join(living) if living else "*(Kimse yok)*"
     return text
 
+# --- Caperubeta "Ölü oyuncular" mesajını işleme ---
+def _temiz_isim(s: str) -> str:
+    s = re.sub(r"[​-‏‪-‮⁠-⁯]", "", s)
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+def _entity_user_id(ent):
+    if ent.type == "text_mention" and ent.user:
+        return ent.user.id
+    if ent.type == "text_link" and ent.url and "tg://user?id=" in ent.url:
+        try:
+            return int(ent.url.split("id=")[1])
+        except ValueError:
+            return None
+    return None
+
+def olu_listesini_isle(chat_id, message) -> list:
+    """Caperubeta'nın 'Ölü oyuncular' mesajını işler, ölenlerin rolünü siler.
+    Silinen oyuncuların isimlerini döndürür."""
+    oyuncular = game_data.get(chat_id)
+    if not oyuncular:
+        return []
+    text = message.text or message.caption or ""
+    if "ölü oyuncular" not in text.lower():
+        return []
+
+    # Mesajdaki kullanıcı linkleri: {görünen isim: user_id}
+    if message.text:
+        ents = message.parse_entities(["text_mention", "text_link"])
+    else:
+        ents = message.parse_caption_entities(["text_mention", "text_link"])
+    link_idleri = {}
+    for ent, gorunen in ents.items():
+        uid = _entity_user_id(ent)
+        if uid:
+            link_idleri[_temiz_isim(gorunen)] = uid
+
+    silinecek = set()
+    for satir in text.splitlines():
+        satir = satir.strip()
+        if not satir.startswith("💀"):
+            continue
+        ad = _temiz_isim(satir.replace("💀", "", 1).split(" - ")[0])
+        if not ad:
+            continue
+        # 1) Link varsa ID ile eşleştir (en güvenilir)
+        for gorunen, uid in link_idleri.items():
+            if ad == gorunen or ad.startswith(gorunen + " "):
+                if uid in oyuncular:
+                    silinecek.add(uid)
+        # 2) Yoksa isimle eşleştir
+        for uid, data in oyuncular.items():
+            oyuncu_adi = _temiz_isim(data.get("name") or "")
+            if oyuncu_adi and (ad == oyuncu_adi or ad.startswith(oyuncu_adi + " ")):
+                silinecek.add(uid)
+
+    silinen_isimler = []
+    for uid in silinecek:
+        silinen_isimler.append(oyuncular[uid]["name"])
+        del oyuncular[uid]
+    return silinen_isimler
+
 async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
     old_id = LAST_LIST_MSG.get(chat_id)
     if old_id:
@@ -664,7 +725,7 @@ async def groups_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     lines = [f"• {info['title']} | ID: `{gid}`" for gid, info in BOT_GROUPS.items()]
     text = "✅ Botun bulunduğu gruplar:\n\n" + "\n".join(lines)
-    await send_updated_list(update, context, chat_id)
+    await update.message.reply_text(text, parse_mode="Markdown")
 
 async def dc_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[
@@ -703,6 +764,21 @@ async def olu_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     del game_data[chat_id][target_user_id]
     await send_updated_list(update, context, chat_id)
 
+async def oluler_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Yedek: Caperubeta'nın 'Ölü oyuncular' mesajına yanıt olarak /oluler yazılır."""
+    msg = update.effective_message
+    hedef = msg.reply_to_message
+    if not hedef:
+        await msg.reply_text("↩️ Caperubeta'nın 'Ölü oyuncular' mesajına yanıt vererek /oluler yaz.")
+        return
+    chat_id = update.effective_chat.id
+    silinen = olu_listesini_isle(chat_id, hedef)
+    if not silinen:
+        await msg.reply_text("ℹ️ Silinecek ölü oyuncu bulunamadı.")
+        return
+    await msg.reply_text("💀 Rolü silinenler: " + ", ".join(silinen))
+    await send_updated_list(update, context, chat_id)
+
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message
     if not msg:
@@ -718,33 +794,15 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
         return
     if t.startswith("/") and not t.startswith("/startranked"):
         return
-    if "ölü oyuncular:" in t:
-        if chat_id not in game_data:
+    if "ölü oyuncular" in t:
+        # Kendi mesajlarımızı işleme (döngü olmasın)
+        if msg.from_user and msg.from_user.id == context.bot.id:
             return
-        satirlar = text.splitlines()
-        olu_isimleri = []
-        for s in satirlar:
-            s = s.strip()
-            if s.startswith("💀"):
-                parca = s.replace("💀", "").strip()
-                ad_kismi = parca.split("-")[0].strip()
-                ad_kismi = re.sub(r"\s+", " ", ad_kismi)
-                ad_kismi = re.sub(r"[\u200b-\u200f\u202a-\u202e\u2060-\u206f]", "", ad_kismi).strip()
-                if ad_kismi:
-                    olu_isimleri.append(ad_kismi.lower())
-        degisiklik = False
-        for uid, data in game_data[chat_id].items():
-            oyuncu_adi = (data.get("name") or "").lower().strip()
-            for oluisim in olu_isimleri:
-                if oyuncu_adi and (oyuncu_adi in oluisim or oluisim in oyuncu_adi):
-                    if data.get("alive", True):
-                        game_data[chat_id][uid]["alive"] = False
-                        degisiklik = True
-        if degisiklik:
-            await msg.reply_text(
-                "📢 **Caperubeta Güncellemesi:** Ölüler listeye işlendi.\n\n" + get_list_text(chat_id),
-                parse_mode="Markdown"
-            )
+        silinen = olu_listesini_isle(chat_id, msg)
+        if silinen:
+            await msg.reply_text("💀 Rolü silinenler: " + ", ".join(silinen))
+            await send_updated_list(update, context, chat_id)
+        return
 
 async def temizle_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
     game_data[update.effective_chat.id] = {}
@@ -819,7 +877,6 @@ if __name__ == '__main__':
     app.add_handler(MessageHandler(filters.ALL, debug_all), group=-1)
     app.add_handler(CommandHandler("ping", ping))
     app.add_handler(ChatMemberHandler(track_bot_membership, ChatMemberHandler.MY_CHAT_MEMBER))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_any_group_message))
     app.add_handler(CommandHandler("groups", groups_cmd))
     app.add_handler(CommandHandler(["rol", "r", "claim"], rol_ekle))
     app.add_handler(CommandHandler("roller", roller_cmd))
@@ -827,10 +884,15 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("sahur", sahur_cmd))
     app.add_handler(CommandHandler("forcestart", forcestart_cmd))
     app.add_handler(CommandHandler(["olu", "dead", "kill", "geber"], olu_komut))
+    app.add_handler(CommandHandler("oluler", oluler_cmd))
     app.add_handler(CommandHandler("temizle", temizle_komut))
     app.add_handler(CommandHandler("dc", dc_komut))
     app.add_handler(CallbackQueryHandler(dc_button_handler))
-    app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi))
+
+    # Ayrı gruplar: ikisi de her mesajda çalışsın diye
+    # (aynı gruptaysa sadece ilk eşleşen çalışır, genel_mesaj_yoneticisi hiç çalışmıyordu)
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_any_group_message), group=1)
+    app.add_handler(MessageHandler(filters.TEXT, genel_mesaj_yoneticisi), group=2)
 
     print("✅ Polling başlıyor...")
     app.run_polling(drop_pending_updates=True)
