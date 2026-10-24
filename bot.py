@@ -2,6 +2,7 @@ import os
 import re
 import random
 import json
+import html
 import requests
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -546,19 +547,40 @@ game_data = {}
 LAST_LIST_MSG = {}
 
 def get_list_text(chat_id):
-    if chat_id not in game_data or not game_data[chat_id]:
+    """Liste metni (HTML). Yaşayanlar + Ölüler (Caperubeta'daki gerçek rolüyle)."""
+    oyuncular = game_data.get(chat_id) or {}
+    if not oyuncular:
         return "ℹ️ Henüz hiç rol girilmemiş."
-    living = []
-    alive_players = [
-        data for data in game_data[chat_id].values()
-        if data.get("alive", True)
-    ]
-    for i, data in enumerate(alive_players, start=1):
-        line = f"{i}. 👤 {data['name']}: {data['role']} {data['emoji']}"
-        living.append(line)
-    text = "📜 **GÜNCEL DURUM LİSTESİ**\n\n"
-    text += "✨ **YAŞAYANLAR**\n"
-    text += "\n".join(living) if living else "*(Kimse yok)*"
+    e = html.escape
+
+    yasayanlar = [d for d in oyuncular.values() if d.get("alive", True)]
+    oluler = [d for d in oyuncular.values() if not d.get("alive", True)]
+
+    text = "📜 <b>GÜNCEL DURUM LİSTESİ</b>\n\n"
+    text += "✨ <b>YAŞAYANLAR</b>\n"
+    if yasayanlar:
+        text += "\n".join(
+            f"{i}. 👤 {e(d['name'])}: {e(d.get('role') or '?')} {d.get('emoji', '')}"
+            for i, d in enumerate(yasayanlar, start=1)
+        )
+    else:
+        text += "<i>(Kimse yok)</i>"
+
+    if oluler:
+        text += "\n\n💀 <b>ÖLÜLER</b>\n"
+        satirlar = []
+        for d in oluler:
+            gercek = d.get("real_role")
+            iddia = d.get("role")
+            if gercek:
+                satir = f"💀 {e(d['name'])}: <b>{e(gercek)}</b>"
+                # Rol iddia ettiyse ve gerçek rolden farklıysa onu da göster
+                if iddia and _temiz_isim(iddia) not in _temiz_isim(gercek):
+                    satir += f" <i>(dedi: {e(iddia)})</i>"
+            else:
+                satir = f"💀 {e(d['name'])}: {e(iddia or '?')} {d.get('emoji', '')}"
+            satirlar.append(satir)
+        text += "\n".join(satirlar)
     return text
 
 # --- Caperubeta "Ölü oyuncular" mesajını işleme ---
@@ -576,15 +598,18 @@ def _entity_user_id(ent):
             return None
     return None
 
+# Oyun sonu mesajındaki "Kaybetti -5 (30904)" gibi kısımları rolden ayıklar
+_SONUC_KALIBI = re.compile(r"\s+(Kaybetti|Kazandı|Kazandi|Berabere)\b.*$", re.IGNORECASE)
+
 def olu_listesini_isle(chat_id, message) -> list:
-    """Caperubeta'nın 'Ölü oyuncular' mesajını işler, ölenlerin rolünü siler.
-    Silinen oyuncuların isimlerini döndürür."""
-    oyuncular = game_data.get(chat_id)
-    if not oyuncular:
-        return []
+    """Caperubeta'nın 'Ölü oyuncular' mesajını işler.
+    Ölenleri listede ölü olarak işaretler ve Caperubeta'daki gerçek rolünü yazar.
+    Rol girmemiş biri öldüyse onu da ölüler kısmına ekler.
+    YENİ ölenlerin '(isim, rol)' listesini döndürür."""
     text = message.text or message.caption or ""
     if "ölü oyuncular" not in text.lower():
         return []
+    oyuncular = game_data.setdefault(chat_id, {})
 
     # Mesajdaki kullanıcı linkleri: {görünen isim: user_id}
     if message.text:
@@ -597,30 +622,53 @@ def olu_listesini_isle(chat_id, message) -> list:
         if uid:
             link_idleri[_temiz_isim(gorunen)] = uid
 
-    silinecek = set()
+    yeni_olenler = []
     for satir in text.splitlines():
         satir = satir.strip()
         if not satir.startswith("💀"):
             continue
-        ad = _temiz_isim(satir.replace("💀", "", 1).split(" - ")[0])
+        govde = satir.replace("💀", "", 1).strip()
+        if " - " in govde:
+            ham_ad, ham_rol = govde.split(" - ", 1)
+        else:
+            ham_ad, ham_rol = govde, ""
+        ham_ad = ham_ad.strip()
+        ad = _temiz_isim(ham_ad)
+        gercek_rol = _SONUC_KALIBI.sub("", ham_rol).strip()
         if not ad:
             continue
-        # 1) Link varsa ID ile eşleştir (en güvenilir)
+
+        # Bu ölü kim? 1) link ID'si  2) isim  3) yoksa yeni kayıt
+        hedef = None
         for gorunen, uid in link_idleri.items():
             if ad == gorunen or ad.startswith(gorunen + " "):
-                if uid in oyuncular:
-                    silinecek.add(uid)
-        # 2) Yoksa isimle eşleştir
-        for uid, data in oyuncular.items():
-            oyuncu_adi = _temiz_isim(data.get("name") or "")
-            if oyuncu_adi and (ad == oyuncu_adi or ad.startswith(oyuncu_adi + " ")):
-                silinecek.add(uid)
+                hedef = uid
+                break
+        if hedef is None or hedef not in oyuncular:
+            for uid, data in oyuncular.items():
+                oyuncu_adi = _temiz_isim(data.get("name") or "")
+                if oyuncu_adi and (ad == oyuncu_adi or ad.startswith(oyuncu_adi + " ")):
+                    hedef = uid
+                    break
+        if hedef is None:
+            hedef = f"isim:{ad}"  # linki de rolü de olmayan ölü
 
-    silinen_isimler = []
-    for uid in silinecek:
-        silinen_isimler.append(oyuncular[uid]["name"])
-        del oyuncular[uid]
-    return silinen_isimler
+        if hedef not in oyuncular:
+            # Rol girmeden ölmüş: Caperubeta'daki adıyla ekle
+            oyuncular[hedef] = {"name": ham_ad, "role": None, "emoji": "", "alive": True}
+
+        kayit = oyuncular[hedef]
+        if gercek_rol:
+            kayit["real_role"] = gercek_rol
+        if kayit.get("alive", True):
+            kayit["alive"] = False
+            yeni_olenler.append((kayit["name"], gercek_rol))
+    return yeni_olenler
+
+def olum_duyurusu(yeni_olenler) -> str:
+    parcalar = [f"{html.escape(ad)} ({html.escape(rol)})" if rol else html.escape(ad)
+                for ad, rol in yeni_olenler]
+    return "💀 Ölüler listeye işlendi: " + ", ".join(parcalar)
 
 async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, chat_id: int):
     old_id = LAST_LIST_MSG.get(chat_id)
@@ -629,7 +677,7 @@ async def send_updated_list(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             await context.bot.delete_message(chat_id=chat_id, message_id=old_id)
         except:
             pass
-    new_msg = await update.message.reply_text(get_list_text(chat_id), parse_mode="Markdown")
+    new_msg = await update.message.reply_text(get_list_text(chat_id), parse_mode="HTML")
     LAST_LIST_MSG[chat_id] = new_msg.message_id
 
 async def post_init(application):
@@ -701,14 +749,22 @@ async def rol_ekle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     full_input = " ".join(context.args).lower()
     first_word = context.args[0].lower()
     emoji = ROLE_EMOJIS.get(first_word, "👤")
-    if chat_id not in game_data:
-        game_data[chat_id] = {}
-    game_data[chat_id][user.id] = {
+    oyuncular = game_data.setdefault(chat_id, {})
+    eski = oyuncular.get(user.id)
+    # Rol girmeden ölüp isimle eklenmiş kaydı varsa onu bu kullanıcıya bağla
+    if eski is None:
+        eski = oyuncular.pop(f"isim:{_temiz_isim(user.first_name or '')}", None)
+    yeni = {
         "name": user.first_name,
         "role": full_input.capitalize(),
         "emoji": emoji,
         "alive": True
     }
+    if eski:  # ölüyse ölü kalsın, Caperubeta'dan gelen gerçek rolü kaybolmasın
+        yeni["alive"] = eski.get("alive", True)
+        if eski.get("real_role"):
+            yeni["real_role"] = eski["real_role"]
+    oyuncular[user.id] = yeni
     await send_updated_list(update, context, chat_id)
 
 async def roller_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -761,7 +817,8 @@ async def olu_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
     if not target_user_id or target_user_id not in game_data[chat_id]:
         return
-    del game_data[chat_id][target_user_id]
+    # Silmek yerine ölüler kısmına taşı
+    game_data[chat_id][target_user_id]["alive"] = False
     await send_updated_list(update, context, chat_id)
 
 async def oluler_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -772,11 +829,9 @@ async def oluler_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.reply_text("↩️ Caperubeta'nın 'Ölü oyuncular' mesajına yanıt vererek /oluler yaz.")
         return
     chat_id = update.effective_chat.id
-    silinen = olu_listesini_isle(chat_id, hedef)
-    if not silinen:
-        await msg.reply_text("ℹ️ Silinecek ölü oyuncu bulunamadı.")
-        return
-    await msg.reply_text("💀 Rolü silinenler: " + ", ".join(silinen))
+    yeni_olenler = olu_listesini_isle(chat_id, hedef)
+    if yeni_olenler:
+        await msg.reply_text(olum_duyurusu(yeni_olenler), parse_mode="HTML")
     await send_updated_list(update, context, chat_id)
 
 async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -798,9 +853,9 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
         # Kendi mesajlarımızı işleme (döngü olmasın)
         if msg.from_user and msg.from_user.id == context.bot.id:
             return
-        silinen = olu_listesini_isle(chat_id, msg)
-        if silinen:
-            await msg.reply_text("💀 Rolü silinenler: " + ", ".join(silinen))
+        yeni_olenler = olu_listesini_isle(chat_id, msg)
+        if yeni_olenler:
+            await msg.reply_text(olum_duyurusu(yeni_olenler), parse_mode="HTML")
             await send_updated_list(update, context, chat_id)
         return
 
