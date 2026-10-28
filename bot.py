@@ -845,16 +845,23 @@ async def genel_mesaj_yoneticisi(update: Update, context: ContextTypes.DEFAULT_T
         return
     chat_id = update.effective_chat.id
     t = text.strip().lower()
-    if t == "startranked" or t.startswith("/startranked"):
-        game_data[chat_id] = {}
-        OLENLER[chat_id] = {}
-        await msg.reply_text("✅ Yeni oyun tespit edildi, roller temizlendi!")
-        return
-    if t.startswith("/") and not t.startswith("/startranked"):
+    if t.startswith("/"):
         return
     if "ölü oyuncular" in t:
         # Kendi mesajlarımızı işleme (döngü olmasın)
         if msg.from_user and msg.from_user.id == context.bot.id:
+            return
+        # Oyun sonu listesi: satırlarda "Kazandı" / "Kaybetti" yazar
+        if "kazandı" in t or "kaybetti" in t:
+            game_data[chat_id] = {}
+            OLENLER[chat_id] = {}
+            old_id = LAST_LIST_MSG.pop(chat_id, None)
+            if old_id:
+                try:
+                    await context.bot.delete_message(chat_id=chat_id, message_id=old_id)
+                except:
+                    pass
+            await msg.reply_text("🏁 Oyun bitti, roller sıfırlandı!")
             return
         silinenler, dirilenler = olu_listesini_isle(chat_id, msg)
         if silinenler or dirilenler:
